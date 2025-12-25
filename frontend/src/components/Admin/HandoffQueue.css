@@ -1,0 +1,12 @@
+.handoff-queue {
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+.handoff-queue .ant-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.handoff-queue .ant-badge {
+  margin-left: 8px;
+}
