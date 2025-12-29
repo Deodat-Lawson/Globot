@@ -241,3 +241,4 @@ except KeyboardInterrupt:
     print(f"  使用 AI 模型: {OLLAMA_MODEL}")
     print("="*60)
 
+
