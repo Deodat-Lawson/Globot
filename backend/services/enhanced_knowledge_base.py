@@ -5,10 +5,15 @@
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
-from langchain.retrievers import EnsembleRetriever, ParentDocumentRetriever
+
+# LangChain 1.x: "classic" holds the old langchain.* implementations
+from langchain_classic.retrievers.ensemble import EnsembleRetriever
+from langchain_classic.retrievers import ParentDocumentRetriever
+from langgraph.store.memory import InMemoryStore
+
 from langchain_community.retrievers import BM25Retriever
-from langchain.storage import InMemoryStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from config import get_settings
 import logging
 from typing import List, Optional, Dict
