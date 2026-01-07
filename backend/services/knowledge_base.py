@@ -1,13 +1,12 @@
 """
 知识库模块 - RAG (Retrieval-Augmented Generation)
 使用Chroma向量数据库存储和检索产品文档
-支持 Mock 模式以应对环境缺失
 """
 import logging
 import os
-from typing import List, Optional
-# Removing langchain_core.documents import here to be safe, defining a simple Document class if needed or using langchain_core if available
-# pip list showed langchain-core IS installed.
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 try:
     from langchain_core.documents import Document
 except ImportError:
@@ -16,6 +15,7 @@ except ImportError:
             self.page_content = page_content
             self.metadata = metadata or {}
 
+from typing import List, Optional
 from config import get_settings
 
 logger = logging.getLogger(__name__)
