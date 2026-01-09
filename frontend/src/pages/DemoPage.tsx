@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWebSocket } from '../services/websocket';
 
 import { GlobalMap2D } from '../components/GlobalMap2D';
@@ -11,7 +11,13 @@ import { AzureBadges } from '../components/AzureBadges';
 import { AgentWorkflow } from '../components/AgentWorkflow';
 
 import { Route, GlobalPort } from '../utils/routeCalculator';
-import { Globe, Map, RefreshCw, Shield } from 'lucide-react';
+import { Globe, Map, RefreshCw, Shield, Radar } from 'lucide-react';
+import { 
+  MarketSentinelResponse, 
+  runSimpleAnalysis, 
+  runAnalysis,
+  createLaneWatchlist 
+} from '../services/marketSentinel';
 
 export const DemoPage: React.FC = () => {
   const { connect } = useWebSocket();
@@ -27,6 +33,11 @@ export const DemoPage: React.FC = () => {
 
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
+
+  // Market Sentinel state
+  const [marketSentinelData, setMarketSentinelData] = useState<MarketSentinelResponse | null>(null);
+  const [marketSentinelLoading, setMarketSentinelLoading] = useState(false);
+  const [marketSentinelError, setMarketSentinelError] = useState<string | null>(null);
 
   // Clock only runs while demo is started
   useEffect(() => {
@@ -83,6 +94,65 @@ export const DemoPage: React.FC = () => {
     setSelectedRoute(route);
   };
 
+  // Run Market Sentinel analysis
+  const runMarketSentinel = useCallback(async () => {
+    setMarketSentinelLoading(true);
+    setMarketSentinelError(null);
+    
+    try {
+      let response: MarketSentinelResponse;
+      
+      // If we have origin/destination, run with lane watchlist
+      if (origin && destination) {
+        // Extract port codes from names (e.g., "Shanghai" -> "CNSHA")
+        const originCode = getPortCode(origin.name);
+        const destinationCode = getPortCode(destination.name);
+        
+        if (originCode && destinationCode) {
+          const params = createLaneWatchlist(originCode, destinationCode);
+          response = await runAnalysis(params);
+        } else {
+          response = await runSimpleAnalysis();
+        }
+      } else {
+        response = await runSimpleAnalysis();
+      }
+      
+      setMarketSentinelData(response);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setMarketSentinelError(errorMessage);
+      console.error('Market Sentinel error:', err);
+    } finally {
+      setMarketSentinelLoading(false);
+    }
+  }, [origin, destination]);
+
+  // Helper to convert port names to codes
+  const getPortCode = (portName: string): string | null => {
+    const portCodes: Record<string, string> = {
+      'Shanghai': 'CNSHA',
+      'Singapore': 'SGSIN',
+      'Rotterdam': 'NLRTM',
+      'Los Angeles': 'USLAX',
+      'Long Beach': 'USLGB',
+      'Hong Kong': 'HKHKG',
+      'Shenzhen': 'CNSZX',
+      'Busan': 'KRPUS',
+      'Hamburg': 'DEHAM',
+      'Antwerp': 'BEANR',
+      'Dubai': 'AEJEA',
+      'Mumbai': 'INBOM',
+      'Tokyo': 'JPTYO',
+      'New York': 'USNYC',
+      'Felixstowe': 'GBFXT',
+      'Colombo': 'LKCMB',
+      'Tanjung Pelepas': 'MYTPP',
+      'Port Klang': 'MYPKG',
+    };
+    return portCodes[portName] || null;
+  };
+
   if (!demoStarted) {
     return <DemoStartScreen onStart={handleStartDemo} />;
   }
@@ -124,6 +194,16 @@ export const DemoPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {/* Run Market Sentinel Button */}
+          <button
+            onClick={runMarketSentinel}
+            disabled={marketSentinelLoading}
+            className="px-3 py-1.5 rounded-sm text-xs font-medium transition-all flex items-center gap-2 bg-[#4a90e2]/10 border border-[#4a90e2]/30 text-[#4a90e2] hover:bg-[#4a90e2]/20 hover:border-[#4a90e2]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Radar className={`w-3.5 h-3.5 ${marketSentinelLoading ? 'animate-spin' : ''}`} strokeWidth={2} />
+            {marketSentinelLoading ? 'Scanning...' : 'Market Sentinel'}
+          </button>
+
           {/* Change Route Button */}
           <button
             onClick={() => setIsChangingRoute(true)}
@@ -208,7 +288,14 @@ export const DemoPage: React.FC = () => {
             <AzureBadges />
 
             {/* Agent workflow */}
-            <AgentWorkflow currentTime={currentTime} isLive={demoStarted} />
+            <AgentWorkflow 
+              currentTime={currentTime} 
+              isLive={demoStarted}
+              marketSentinelData={marketSentinelData}
+              marketSentinelLoading={marketSentinelLoading}
+              marketSentinelError={marketSentinelError}
+              onRunMarketSentinel={runMarketSentinel}
+            />
           </div>
         </div>
       </div>
