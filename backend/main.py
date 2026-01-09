@@ -17,11 +17,12 @@ from models import Customer, Conversation, Message, CustomerCategory, MessageSen
 from core.chatbot import get_chatbot
 from core.classifier import get_classifier
 from core.handoff_manager import get_handoff_manager
-from core.crew_orchestrator import CrewAIOrchestrator
+from core.crew_orchestrator import CrewAIOrchestrator, get_crew_orchestrator
 from core.crew_stock_research import build_company_research_crew
 
 from api.v2.azure_routes import router as azure_router
 from api.v2.demo_routes import router as demo_router
+from api.v2.market_sentinel_routes import router as market_sentinel_router
 from services.telegram_service import get_telegram_service
 
 # 配置日志
@@ -40,6 +41,7 @@ app = FastAPI(
 # 注册Azure路由
 app.include_router(azure_router)
 app.include_router(demo_router)
+app.include_router(market_sentinel_router)
 
 # 配置CORS
 app.add_middleware(
