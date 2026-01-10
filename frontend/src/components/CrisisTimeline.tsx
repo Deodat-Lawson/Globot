@@ -11,17 +11,57 @@ interface TimelineEvent {
   type: 'critical' | 'info' | 'success';
 }
 
+// Shanghai → Hamburg Demo Scenario (~2 min, 35 events)
+// Phase 1: 平静无事 (Calm operations) - 7 events
+// Phase 2: 预测爆发危机 (Crisis prediction) - 7 events
+// Phase 3: 生成替代方案 (Alternative route generation) - 7 events
+// Phase 4: 真实危机爆发 (Real crisis outbreak) - 7 events
+// Phase 5: 替代方案执行 (Alternative plan execution) - 7 events
 const eventMessages = [
-  { message: 'Risk Hedger recalculated exposure across 47 active shipments', type: 'success' as const },
-  { message: 'Alternative route via Southern corridor approved by Logistics Orchestrator', type: 'success' as const },
-  { message: 'Adversarial Debate validated route feasibility against historical data', type: 'info' as const },
-  { message: 'Azure OpenAI queried 1,247 regulatory documents for compliance check', type: 'info' as const },
-  { message: 'Market Sentinel detected geopolitical risk spike in North Atlantic corridor', type: 'critical' as const },
-  { message: 'Azure AI Search indexed 3,421 new shipping reports', type: 'info' as const },
-  { message: 'Compliance Manager flagged new sanctions on Hamburg route', type: 'critical' as const },
-  { message: 'Port congestion alert - Hamburg capacity at 94%', type: 'critical' as const },
-  { message: 'Logistics Orchestrator secured alternative carrier capacity', type: 'success' as const },
-  { message: 'Azure Cognitive identified 3 historical precedents for crisis events', type: 'info' as const },
+  // === Phase 1: 平静无事 (Calm operations - Suez Canal route planned) ===
+  { message: 'Shanghai → Hamburg: Vessel MV Pacific Fortune departed Yangshan Deep Water Port', type: 'success' as const },
+  { message: 'Cargo manifest validated: 4,200 TEU containers, high-value electronics shipment', type: 'info' as const },
+  { message: 'Route: Suez Canal (Red Sea) - shortest path. Transit scheduled Day 18', type: 'success' as const },
+  { message: 'Market Sentinel monitoring 156 global risk indicators - all within normal range', type: 'info' as const },
+  { message: 'Azure AI Search indexed 2,847 shipping intelligence reports. No anomalies detected', type: 'info' as const },
+  { message: 'Weather forecast: Favorable conditions through Indian Ocean corridor', type: 'success' as const },
+  { message: 'Vessel on course via Suez Canal route. ETA Hamburg: 28 days. Status: NOMINAL', type: 'success' as const },
+  
+  // === Phase 2: 预测爆发危机 (Crisis prediction - Suez route at risk) ===
+  { message: '⚡ Market Sentinel: Unusual naval activity detected near Suez Canal / Red Sea region', type: 'info' as const },
+  { message: 'Azure OpenAI analyzing 3,421 intelligence reports from past 72 hours', type: 'info' as const },
+  { message: 'Social media sentiment analysis: Geopolitical tension keywords spiking (+340%)', type: 'info' as const },
+  { message: '⚠️ Predictive model: 67% probability Suez Canal route disrupted within 5 days', type: 'critical' as const },
+  { message: 'Risk Hedger: Suez Canal (Red Sea) route alert level → ELEVATED', type: 'critical' as const },
+  { message: 'Azure Cognitive: Pattern matching 2024 Houthi crisis precedent (87% similarity)', type: 'info' as const },
+  { message: '⚠️ Fleet anomaly: 12 vessels diverted from Suez route in past 6 hours', type: 'critical' as const },
+  
+  // === Phase 3: 生成替代方案 (Generate alternative plans - aligned with Available Routes) ===
+  { message: 'Logistics Orchestrator analyzing 3 alternative routes from Available Routes panel', type: 'info' as const },
+  { message: '📍 Cape of Good Hope (Standard): Shanghai → Singapore → Cape Town → Rotterdam → Hamburg', type: 'info' as const },
+  { message: '📍 Panama Canal (Westbound): Shanghai → Pacific → Panama → Atlantic → Hamburg (+18 days)', type: 'info' as const },
+  { message: '📍 Northern Sea Route (Arctic): REJECTED - Seasonal route impassable in current conditions', type: 'critical' as const },
+  { message: 'Adversarial Debate: Cape route optimal - LOW RISK, +12 days, $180K additional fuel cost', type: 'info' as const },
+  { message: 'Azure AI Search: Cape of Good Hope 94% reliability during Red Sea tensions (2015-2024 data)', type: 'success' as const },
+  { message: '✅ Route selected: Cape of Good Hope (Standard). Pre-booking Singapore & Cape Town berths', type: 'success' as const },
+  
+  // === Phase 4: 真实危机爆发 (Real crisis outbreak - Suez Canal route compromised) ===
+  { message: '🚨 BREAKING: Commercial vessel struck by missile in Bab el-Mandeb Strait', type: 'critical' as const },
+  { message: '🚨 Suez Canal (Red Sea) route: Multiple shipping companies suspending transit', type: 'critical' as const },
+  { message: '🚨 Suez Canal Authority: All northbound traffic SUSPENDED until further notice', type: 'critical' as const },
+  { message: 'Insurance: Suez Canal route declared WAR RISK zone, premiums +500%', type: 'critical' as const },
+  { message: 'Market impact: Asia-Europe freight rates surging +$2,400/TEU in 4 hours', type: 'critical' as const },
+  { message: 'MV Pacific Fortune position: Approaching Singapore, 72 hours before Suez decision point', type: 'info' as const },
+  { message: 'Risk comparison: Suez Canal route $4.7M exposure vs Cape of Good Hope $890K', type: 'critical' as const },
+  
+  // === Phase 5: 替代方案执行 (Execute alternative plan) ===
+  { message: '✅ DECISION EXECUTED: Switching to Cape of Good Hope (Standard) route', type: 'success' as const },
+  { message: 'Captain notified. Course adjustment: Singapore → Cape Town → Rotterdam → Hamburg', type: 'info' as const },
+  { message: 'Singapore berth confirmed for Day 8. Cape Town refueling scheduled Day 22', type: 'success' as const },
+  { message: 'Compliance Manager: Customs documentation updated for South Africa & EU transit', type: 'success' as const },
+  { message: 'Customer notification sent: New ETA Hamburg 40 days (+12 days, avoiding Red Sea risk)', type: 'info' as const },
+  { message: 'Risk level downgraded: HIGH → LOW. Suez Canal route avoided successfully', type: 'success' as const },
+  { message: '✅ Crisis averted. Estimated savings vs Suez exposure: $3.8M. Vessel safe on Cape route', type: 'success' as const },
 ];
 
 export function CrisisTimeline() {

@@ -92,7 +92,7 @@ export function RouteSelector({ routes, selectedRoute, onRouteSelect }: RouteSel
         </div>
 
         {/* Route Options */}
-        <div className="space-y-2.5 overflow-y-auto route-scroll pr-1 min-h-0 flex-1">
+        <div className="space-y-2.5 overflow-y-auto route-scroll pr-1" style={{ maxHeight: '320px' }}>
           {displayRoutes.map((route, index) => {
             const isSelected = selectedRoute?.id === route.id;
             
