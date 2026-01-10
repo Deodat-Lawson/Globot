@@ -11,13 +11,16 @@ interface TimelineEvent {
   type: 'critical' | 'info' | 'success';
 }
 
+interface CrisisTimelineProps {
+  executionPhase?: 'pending' | 'executing' | 'complete';
+}
+
 // Shanghai → Hamburg Demo Scenario (~2 min, 35 events)
-// Phase 1: 平静无事 (Calm operations) - 7 events
-// Phase 2: 预测爆发危机 (Crisis prediction) - 7 events
-// Phase 3: 生成替代方案 (Alternative route generation) - 7 events
-// Phase 4: 真实危机爆发 (Real crisis outbreak) - 7 events
-// Phase 5: 替代方案执行 (Alternative plan execution) - 7 events
-const eventMessages = [
+// Phase 1-4: Pre-execution events (28 events)
+// Phase 5: Post-decision execution events (7 events) - triggered by workflow approval
+
+// Phases 1-4: Events that play before decision approval
+const preExecutionMessages = [
   // === Phase 1: 平静无事 (Calm operations - Suez Canal route planned) ===
   { message: 'Shanghai → Hamburg: Vessel MV Pacific Fortune departed Yangshan Deep Water Port', type: 'success' as const },
   { message: 'Cargo manifest validated: 4,200 TEU containers, high-value electronics shipment', type: 'info' as const },
@@ -52,10 +55,12 @@ const eventMessages = [
   { message: 'Insurance: Suez Canal route declared WAR RISK zone, premiums +500%', type: 'critical' as const },
   { message: 'Market impact: Asia-Europe freight rates surging +$2,400/TEU in 4 hours', type: 'critical' as const },
   { message: 'MV Pacific Fortune position: Approaching Singapore, 72 hours before Suez decision point', type: 'info' as const },
-  { message: 'Risk comparison: Suez Canal route $4.7M exposure vs Cape of Good Hope $890K', type: 'critical' as const },
-  
-  // === Phase 5: 替代方案执行 (Execute alternative plan) ===
-  { message: '✅ DECISION EXECUTED: Switching to Cape of Good Hope (Standard) route', type: 'success' as const },
+  { message: '⏳ AWAITING DECISION: Recommend switch to Cape of Good Hope route. Approval required.', type: 'critical' as const },
+];
+
+// Phase 5: Events that play ONLY after decision agent approval
+const executionMessages = [
+  { message: '✅ DECISION APPROVED: Switching to Cape of Good Hope (Standard) route', type: 'success' as const },
   { message: 'Captain notified. Course adjustment: Singapore → Cape Town → Rotterdam → Hamburg', type: 'info' as const },
   { message: 'Singapore berth confirmed for Day 8. Cape Town refueling scheduled Day 22', type: 'success' as const },
   { message: 'Compliance Manager: Customs documentation updated for South Africa & EU transit', type: 'success' as const },
@@ -64,7 +69,7 @@ const eventMessages = [
   { message: '✅ Crisis averted. Estimated savings vs Suez exposure: $3.8M. Vessel safe on Cape route', type: 'success' as const },
 ];
 
-export function CrisisTimeline() {
+export function CrisisTimeline({ executionPhase = 'pending' }: CrisisTimelineProps) {
   const [riskData, setRiskData] = useState([
     { time: '09:00', risk: 15 },
     { time: '09:30', risk: 22 },
@@ -78,7 +83,9 @@ export function CrisisTimeline() {
   ]);
 
   const [events, setEvents] = useState<TimelineEvent[]>([]);
-  const [eventIndex, setEventIndex] = useState(0);
+  const [preExecIndex, setPreExecIndex] = useState(0);
+  const [execIndex, setExecIndex] = useState(0);
+  const [hasTriggeredExecution, setHasTriggeredExecution] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Continuous chart updates
@@ -108,8 +115,19 @@ export function CrisisTimeline() {
     return () => clearInterval(interval);
   }, []);
 
-  // Continuous event log updates
+  // Trigger execution messages when decision is approved
   useEffect(() => {
+    if ((executionPhase === 'executing' || executionPhase === 'complete') && !hasTriggeredExecution) {
+      setHasTriggeredExecution(true);
+      setExecIndex(0); // Start execution messages from beginning
+    }
+  }, [executionPhase, hasTriggeredExecution]);
+
+  // Pre-execution event log updates (Phases 1-4)
+  useEffect(() => {
+    // Stop pre-execution messages once we've shown them all or execution started
+    if (preExecIndex >= preExecutionMessages.length) return;
+
     const interval = setInterval(() => {
       const now = new Date();
       const time = now.toLocaleTimeString('en-US', { 
@@ -121,15 +139,41 @@ export function CrisisTimeline() {
       const newEvent: TimelineEvent = {
         id: Date.now().toString(),
         time,
-        ...eventMessages[eventIndex % eventMessages.length],
+        ...preExecutionMessages[preExecIndex],
       };
 
-      setEvents((prev) => [newEvent, ...prev].slice(0, 8));
-      setEventIndex((prev) => prev + 1);
+      setEvents((prev) => [newEvent, ...prev].slice(0, 10));
+      setPreExecIndex((prev) => prev + 1);
     }, 3500); // New event every 3.5 seconds
 
     return () => clearInterval(interval);
-  }, [eventIndex]);
+  }, [preExecIndex]);
+
+  // Execution event log updates (Phase 5) - only after decision approval
+  useEffect(() => {
+    if (!hasTriggeredExecution) return;
+    if (execIndex >= executionMessages.length) return;
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      const newEvent: TimelineEvent = {
+        id: `exec-${Date.now()}`,
+        time,
+        ...executionMessages[execIndex],
+      };
+
+      setEvents((prev) => [newEvent, ...prev].slice(0, 10));
+      setExecIndex((prev) => prev + 1);
+    }, 2500); // Execution events slightly faster (2.5s)
+
+    return () => clearInterval(interval);
+  }, [hasTriggeredExecution, execIndex]);
 
   // Auto-scroll to top when new events arrive
   useEffect(() => {
