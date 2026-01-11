@@ -11,20 +11,65 @@ interface TimelineEvent {
   type: 'critical' | 'info' | 'success';
 }
 
-const eventMessages = [
-  { message: 'Risk Hedger recalculated exposure across 47 active shipments', type: 'success' as const },
-  { message: 'Alternative route via Southern corridor approved by Logistics Orchestrator', type: 'success' as const },
-  { message: 'Adversarial Debate validated route feasibility against historical data', type: 'info' as const },
-  { message: 'Azure OpenAI queried 1,247 regulatory documents for compliance check', type: 'info' as const },
-  { message: 'Market Sentinel detected geopolitical risk spike in North Atlantic corridor', type: 'critical' as const },
-  { message: 'Azure AI Search indexed 3,421 new shipping reports', type: 'info' as const },
-  { message: 'Compliance Manager flagged new sanctions on Hamburg route', type: 'critical' as const },
-  { message: 'Port congestion alert - Hamburg capacity at 94%', type: 'critical' as const },
-  { message: 'Logistics Orchestrator secured alternative carrier capacity', type: 'success' as const },
-  { message: 'Azure Cognitive identified 3 historical precedents for crisis events', type: 'info' as const },
+interface CrisisTimelineProps {
+  executionPhase?: 'pending' | 'executing' | 'complete';
+}
+
+// Shanghai → Hamburg Demo Scenario (~2 min, 35 events)
+// Phase 1-4: Pre-execution events (28 events)
+// Phase 5: Post-decision execution events (7 events) - triggered by workflow approval
+
+// Phases 1-4: Events that play before decision approval
+const preExecutionMessages = [
+  // === Phase 1: 平静无事 (Calm operations - Suez Canal route planned) ===
+  { message: 'Shanghai → Hamburg: Vessel MV Pacific Fortune departed Yangshan Deep Water Port', type: 'success' as const },
+  { message: 'Cargo manifest validated: 4,200 TEU containers, high-value electronics shipment', type: 'info' as const },
+  { message: 'Route: Suez Canal (Red Sea) - shortest path. Transit scheduled Day 18', type: 'success' as const },
+  { message: 'Market Sentinel monitoring 156 global risk indicators - all within normal range', type: 'info' as const },
+  { message: 'Azure AI Search indexed 2,847 shipping intelligence reports. No anomalies detected', type: 'info' as const },
+  { message: 'Weather forecast: Favorable conditions through Indian Ocean corridor', type: 'success' as const },
+  { message: 'Vessel on course via Suez Canal route. ETA Hamburg: 28 days. Status: NOMINAL', type: 'success' as const },
+  
+  // === Phase 2: 预测爆发危机 (Crisis prediction - Suez route at risk) ===
+  { message: '⚡ Market Sentinel: Unusual naval activity detected near Suez Canal / Red Sea region', type: 'info' as const },
+  { message: 'Azure OpenAI analyzing 3,421 intelligence reports from past 72 hours', type: 'info' as const },
+  { message: 'Social media sentiment analysis: Geopolitical tension keywords spiking (+340%)', type: 'info' as const },
+  { message: '⚠️ Predictive model: 67% probability Suez Canal route disrupted within 5 days', type: 'critical' as const },
+  { message: 'Risk Hedger: Suez Canal (Red Sea) route alert level → ELEVATED', type: 'critical' as const },
+  { message: 'Azure Cognitive: Pattern matching 2024 Houthi crisis precedent (87% similarity)', type: 'info' as const },
+  { message: '⚠️ Fleet anomaly: 12 vessels diverted from Suez route in past 6 hours', type: 'critical' as const },
+  
+  // === Phase 3: 生成替代方案 (Generate alternative plans - aligned with Available Routes) ===
+  { message: 'Logistics Orchestrator analyzing 3 alternative routes from Available Routes panel', type: 'info' as const },
+  { message: '📍 Cape of Good Hope (Standard): Shanghai → Singapore → Cape Town → Rotterdam → Hamburg', type: 'info' as const },
+  { message: '📍 Panama Canal (Westbound): Shanghai → Pacific → Panama → Atlantic → Hamburg (+18 days)', type: 'info' as const },
+  { message: '📍 Northern Sea Route (Arctic): REJECTED - Seasonal route impassable in current conditions', type: 'critical' as const },
+  { message: 'Adversarial Debate: Cape route optimal - LOW RISK, +12 days, $180K additional fuel cost', type: 'info' as const },
+  { message: 'Azure AI Search: Cape of Good Hope 94% reliability during Red Sea tensions (2015-2024 data)', type: 'success' as const },
+  { message: '✅ Route selected: Cape of Good Hope (Standard). Pre-booking Singapore & Cape Town berths', type: 'success' as const },
+  
+  // === Phase 4: 真实危机爆发 (Real crisis outbreak - Suez Canal route compromised) ===
+  { message: '🚨 BREAKING: Commercial vessel struck by missile in Bab el-Mandeb Strait', type: 'critical' as const },
+  { message: '🚨 Suez Canal (Red Sea) route: Multiple shipping companies suspending transit', type: 'critical' as const },
+  { message: '🚨 Suez Canal Authority: All northbound traffic SUSPENDED until further notice', type: 'critical' as const },
+  { message: 'Insurance: Suez Canal route declared WAR RISK zone, premiums +500%', type: 'critical' as const },
+  { message: 'Market impact: Asia-Europe freight rates surging +$2,400/TEU in 4 hours', type: 'critical' as const },
+  { message: 'MV Pacific Fortune position: Approaching Singapore, 72 hours before Suez decision point', type: 'info' as const },
+  { message: '⏳ AWAITING DECISION: Recommend switch to Cape of Good Hope route. Approval required.', type: 'critical' as const },
 ];
 
-export function CrisisTimeline() {
+// Phase 5: Events that play ONLY after decision agent approval
+const executionMessages = [
+  { message: '✅ DECISION APPROVED: Switching to Cape of Good Hope (Standard) route', type: 'success' as const },
+  { message: 'Captain notified. Course adjustment: Singapore → Cape Town → Rotterdam → Hamburg', type: 'info' as const },
+  { message: 'Singapore berth confirmed for Day 8. Cape Town refueling scheduled Day 22', type: 'success' as const },
+  { message: 'Compliance Manager: Customs documentation updated for South Africa & EU transit', type: 'success' as const },
+  { message: 'Customer notification sent: New ETA Hamburg 40 days (+12 days, avoiding Red Sea risk)', type: 'info' as const },
+  { message: 'Risk level downgraded: HIGH → LOW. Suez Canal route avoided successfully', type: 'success' as const },
+  { message: '✅ Crisis averted. Estimated savings vs Suez exposure: $3.8M. Vessel safe on Cape route', type: 'success' as const },
+];
+
+export function CrisisTimeline({ executionPhase = 'pending' }: CrisisTimelineProps) {
   const [riskData, setRiskData] = useState([
     { time: '09:00', risk: 15 },
     { time: '09:30', risk: 22 },
@@ -38,7 +83,9 @@ export function CrisisTimeline() {
   ]);
 
   const [events, setEvents] = useState<TimelineEvent[]>([]);
-  const [eventIndex, setEventIndex] = useState(0);
+  const [preExecIndex, setPreExecIndex] = useState(0);
+  const [execIndex, setExecIndex] = useState(0);
+  const [hasTriggeredExecution, setHasTriggeredExecution] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Continuous chart updates
@@ -68,8 +115,19 @@ export function CrisisTimeline() {
     return () => clearInterval(interval);
   }, []);
 
-  // Continuous event log updates
+  // Trigger execution messages when decision is approved
   useEffect(() => {
+    if ((executionPhase === 'executing' || executionPhase === 'complete') && !hasTriggeredExecution) {
+      setHasTriggeredExecution(true);
+      setExecIndex(0); // Start execution messages from beginning
+    }
+  }, [executionPhase, hasTriggeredExecution]);
+
+  // Pre-execution event log updates (Phases 1-4)
+  useEffect(() => {
+    // Stop pre-execution messages once we've shown them all or execution started
+    if (preExecIndex >= preExecutionMessages.length) return;
+
     const interval = setInterval(() => {
       const now = new Date();
       const time = now.toLocaleTimeString('en-US', { 
@@ -81,15 +139,41 @@ export function CrisisTimeline() {
       const newEvent: TimelineEvent = {
         id: Date.now().toString(),
         time,
-        ...eventMessages[eventIndex % eventMessages.length],
+        ...preExecutionMessages[preExecIndex],
       };
 
-      setEvents((prev) => [newEvent, ...prev].slice(0, 8));
-      setEventIndex((prev) => prev + 1);
+      setEvents((prev) => [newEvent, ...prev].slice(0, 10));
+      setPreExecIndex((prev) => prev + 1);
     }, 3500); // New event every 3.5 seconds
 
     return () => clearInterval(interval);
-  }, [eventIndex]);
+  }, [preExecIndex]);
+
+  // Execution event log updates (Phase 5) - only after decision approval
+  useEffect(() => {
+    if (!hasTriggeredExecution) return;
+    if (execIndex >= executionMessages.length) return;
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      const newEvent: TimelineEvent = {
+        id: `exec-${Date.now()}`,
+        time,
+        ...executionMessages[execIndex],
+      };
+
+      setEvents((prev) => [newEvent, ...prev].slice(0, 10));
+      setExecIndex((prev) => prev + 1);
+    }, 2500); // Execution events slightly faster (2.5s)
+
+    return () => clearInterval(interval);
+  }, [hasTriggeredExecution, execIndex]);
 
   // Auto-scroll to top when new events arrive
   useEffect(() => {

@@ -599,7 +599,7 @@ export const DemoPage: React.FC = () => {
 
           {/* Timeline */}
           <div className="shrink-0" style={{ height: bottomHeight }}>
-            <CrisisTimeline />
+            <CrisisTimeline executionPhase={executionPhase} />
           </div>
         </div>
 
