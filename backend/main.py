@@ -14,9 +14,9 @@ import hashlib
 # 导入模块
 from database import get_db, Base, engine
 from models import Customer, Conversation, Message, CustomerCategory, MessageSender, Handoff, ConversationStatus
-from core.chatbot import get_chatbot
-from core.classifier import get_classifier
-from core.handoff_manager import get_handoff_manager
+# from core.chatbot import get_chatbot
+# from core.classifier import get_classifier
+# from core.handoff_manager import get_handoff_manager
 from core.crew_orchestrator import CrewAIOrchestrator, get_crew_orchestrator
 from core.crew_stock_research import build_company_research_crew
 
@@ -53,17 +53,17 @@ app.add_middleware(
 
 # 初始化核心模块
 try:
-    chatbot = get_chatbot()
-    classifier = get_classifier()
-    handoff_manager = get_handoff_manager()
+    # chatbot = get_chatbot()
+    # classifier = get_classifier()
+    # handoff_manager = get_handoff_manager()
     crew_orchestrator = get_crew_orchestrator()
     logger.info("核心模块初始化成功")
 except Exception as e:
     logger.error(f"核心模块初始化失败: {e}")
     # MVP阶段允许部分功能不可用
-    chatbot = None
-    classifier = None
-    handoff_manager = None
+    # chatbot = None
+    # classifier = None
+    # handoff_manager = None
     crew_orchestrator = None
 
 
