@@ -101,8 +101,9 @@ _后端运行在 `http://localhost:8000`_
 
 ### 2. 启动前端
 
-```bash
+```another bash
 cd frontend
+npm install
 npm run dev
 ```
 _前端运行在 `http://localhost:5173`_
