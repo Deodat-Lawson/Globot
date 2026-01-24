@@ -93,7 +93,7 @@ export const PATH_INTRA_ASIA: [number, number][] = [
     [105.0, 5.0], [104.0, 1.3]
 ];
 
-// 7. ASIA -> MEDITERRANEAN (via Suez)
+// 7. ASIA -> MEDITERRANEAN (via Suez) - Ends at Suez Exit for flexible routing
 export const PATH_ASIA_MED_SUEZ: [number, number][] = [
     [122.0, 31.0], [120.0, 23.0], 
     [110.0, 10.0], [104.0, 1.3], 
@@ -101,7 +101,7 @@ export const PATH_ASIA_MED_SUEZ: [number, number][] = [
     [55.0, 12.0], [50.0, 13.0], [45.0, 12.5], // Gulf of Aden
     [43.0, 12.5], [41.0, 15.0], // Red Sea
     [38.0, 19.0], [36.0, 23.0], [34.0, 27.0], [32.5, 29.9], // Suez
-    [31.0, 31.5], [25.0, 33.5], [15.0, 36.0], [5.0, 37.0], [-4.0, 36.0] // Approx to Gibraltar
+    [32.0, 31.3]  // Port Said (Suez Exit) - Route ends here, system connects to destination
 ];
 
 // 8. ASIA -> MEDITERRANEAN (via Cape)
@@ -114,4 +114,54 @@ export const PATH_ASIA_MED_CAPE: [number, number][] = [
     [20.0, -35.5], [18.5, -35.0], [15.0, -32.0], 
     [10.0, -20.0], [0.0, -10.0], [-10.0, 0.0], [-18.0, 10.0], 
     [-15.0, 30.0], [-10.0, 34.0], [-6.0, 35.8] // Into Med via Gibraltar
+];
+
+// --- NEW "SPINE" SYSTEM FOR MODULAR ROUTING ---
+
+// 1. MEDITERRANEAN SPINE (Gibraltar <-> Suez)
+// Central highway through the Med, avoiding islands/land
+export const PATH_SPINE_MED: [number, number][] = [
+    [-5.5, 36.0], // Gibraltar Start
+    [-4.0, 36.2], // Alboran Sea
+    [0.0, 37.0],  // Off Algeria
+    [8.0, 38.0],  // North of Tunisia, South of Sardinia
+    [12.0, 37.5], // Sicily Channel
+    [15.0, 36.5], // South of Sicily
+    [20.0, 35.5], // Ionian Sea
+    [26.0, 34.0], // South of Crete
+    [30.0, 33.0], // SE Med
+    [32.0, 31.5]  // Port Said (Suez Entrance)
+];
+
+// 2. NORTH ATLANTIC SPINE (English Channel <-> Gibraltar)
+// Hugs the European coast safely
+export const PATH_SPINE_NORTH_ATLANTIC: [number, number][] = [
+    [2.5, 51.5],  // Southern North Sea
+    [0.0, 50.0],  // English Channel
+    [-5.0, 48.5], // Ushant (France Tip)
+    [-8.0, 45.0], // Bay of Biscay Deep
+    [-10.0, 42.0], // Off Portugal North
+    [-10.0, 37.0], // Cape St Vincent
+    [-7.0, 36.0], // Gulf of Cadiz
+    [-5.5, 36.0]  // Gibraltar Connection
+];
+
+// 3. ASIA SPINE (Shanghai <-> Singapore)
+export const PATH_SPINE_ASIA: [number, number][] = [
+    [122.0, 31.0], // Shanghai
+    [123.0, 29.0], // East China Sea
+    [120.5, 24.0], // Taiwan Strait
+    [118.0, 21.0], // South China Sea North
+    [112.0, 15.0], // Paracel Area
+    [109.0, 10.0], // Spratly Area
+    [105.0, 5.0],  // Off Vietnam
+    [104.2, 1.4]   // Singapore East
+];
+
+// 4. TRANS-ATLANTIC SPINE (Gibraltar <-> US East Coast/Panama)
+export const PATH_SPINE_TRANS_ATLANTIC: [number, number][] = [
+    [-6.0, 35.8], // Gibraltar
+    [-20.0, 30.0], // Mid Atlantic
+    [-45.0, 25.0], // Central Atlantic
+    [-70.0, 25.0]  // Approach Carribean/East Coast
 ];

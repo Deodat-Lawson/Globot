@@ -538,9 +538,9 @@ export const DemoPage: React.FC = () => {
           </div>
 
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold tracking-wide truncate">
-              Globot Shield · 4:55 PM Strait of Hormuz scenario
-            </h1>
+                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300">
+                  Globot Shield
+                </h1>
             <p className="text-xs text-white/40 truncate">
               {origin?.name} → {destination?.name} · T+{currentTime.toFixed(0)}s · {scenarioPhase}
             </p>
@@ -629,11 +629,7 @@ export const DemoPage: React.FC = () => {
 
             )}
             
-            {/* Ship Details Overlay */}
-            <ShipDetailsCard 
-              ship={selectedShip} 
-              onClose={() => setSelectedShip(null)} 
-            />
+
           </div>
 
           {/* Resize Handle for Bottom Panel */}
