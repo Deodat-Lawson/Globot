@@ -16,66 +16,69 @@ import { PaymentPage } from './pages/PaymentPage';
 import { PortSelectionPage } from './pages/PortSelectionPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { CommonHeader } from './components/CommonHeader';
+import { HeaderProvider } from './context/HeaderContext';
 
 function App() {
   return (
     <ConfigProvider locale={zhCN}>
-      <BrowserRouter>
-        <CommonHeader />
-        <Routes>
-          <Route path="/" element={<Navigate to="/pay" replace />} />
-          <Route path="/pay" element={<PaymentPage />} />
+      <HeaderProvider>
+        <BrowserRouter>
+          <CommonHeader />
+          <Routes>
+            <Route path="/" element={<Navigate to="/pay" replace />} />
+            <Route path="/pay" element={<PaymentPage />} />
 
-          <Route
-            path="/sign-in/*"
-            element={<div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}><SignIn routing="path" path="/sign-in" /></div>}
-          />
-          <Route
-            path="/sign-up/*"
-            element={<div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}><SignUp routing="path" path="/sign-up" /></div>}
-          />
+            <Route
+              path="/sign-in/*"
+              element={<div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}><SignIn routing="path" path="/sign-in" /></div>}
+            />
+            <Route
+              path="/sign-up/*"
+              element={<div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}><SignUp routing="path" path="/sign-up" /></div>}
+            />
 
-          <Route
-            path="/port"
-            element={
-              <>
-                <SignedIn>
-                  <PortSelectionPage />
-                </SignedIn>
-                <SignedOut>
-                  <RedirectToSignIn />
-                </SignedOut>
-              </>
-            }
-          />
-          <Route
-            path="/demo"
-            element={
-              <>
-                <SignedIn>
-                  <DemoPage />
-                </SignedIn>
-                <SignedOut>
-                  <RedirectToSignIn />
-                </SignedOut>
-              </>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <>
-                <SignedIn>
-                  <AdminDashboard />
-                </SignedIn>
-                <SignedOut>
-                  <RedirectToSignIn />
-                </SignedOut>
-              </>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
+            <Route
+              path="/port"
+              element={
+                <>
+                  <SignedIn>
+                    <PortSelectionPage />
+                  </SignedIn>
+                  <SignedOut>
+                    <RedirectToSignIn />
+                  </SignedOut>
+                </>
+              }
+            />
+            <Route
+              path="/demo"
+              element={
+                <>
+                  <SignedIn>
+                    <DemoPage />
+                  </SignedIn>
+                  <SignedOut>
+                    <RedirectToSignIn />
+                  </SignedOut>
+                </>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <>
+                  <SignedIn>
+                    <AdminDashboard />
+                  </SignedIn>
+                  <SignedOut>
+                    <RedirectToSignIn />
+                  </SignedOut>
+                </>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </HeaderProvider>
     </ConfigProvider>
   );
 }

@@ -15,12 +15,13 @@ import { Route, GlobalPort } from '../utils/routeCalculator';
 import { Ship } from '../utils/shipData';
 import { ShipDetailsCard } from '../components/ShipDetailsCard';
 import { Globe, Map, RefreshCw, Shield, Brain, ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from 'lucide-react';
+import { useHeader } from '../context/HeaderContext';
 
-import { 
-  MarketSentinelResponse, 
-  runSimpleAnalysis, 
+import {
+  MarketSentinelResponse,
+  runSimpleAnalysis,
   runAnalysis,
-  createLaneWatchlist 
+  createLaneWatchlist
 } from '../services/marketSentinel';
 
 // CoT Type Definitions
@@ -213,12 +214,12 @@ export const DemoPage: React.FC = () => {
   // === Time Animation Loop ===
   useEffect(() => {
     if (!demoStarted) return;
-    
+
     // Use setInterval for integer-level updates (more stable than high-freq RAF)
     const intervalId = setInterval(() => {
       setCurrentTime(prev => prev + 1);
     }, 1000);
-    
+
     return () => {
       clearInterval(intervalId);
     };
@@ -330,12 +331,12 @@ export const DemoPage: React.FC = () => {
 
       case 'EXECUTION_STEP':
         setExecutionSteps(prev => {
-           if (prev.find(s => s.step_id === lastEvent.data.step_id)) return prev;
-           return [...prev, lastEvent.data];
+          if (prev.find(s => s.step_id === lastEvent.data.step_id)) return prev;
+          return [...prev, lastEvent.data];
         });
         setActiveExecutionIndex(lastEvent.step_index);
         break;
-      
+
       case 'EXECUTION_STEP_COMPLETE':
         setExecutionSteps(prev => prev.map(step => {
           if (step.step_id === lastEvent.step_id) {
@@ -349,7 +350,7 @@ export const DemoPage: React.FC = () => {
         setExecutionPhase('complete');
         setExecutionSummary(lastEvent.data);
         break;
-        
+
       case 'DEMO_COMPLETE':
         // Optional: Show final summary modal or notification
         console.log("Demo Sequence Completed", lastEvent.summary);
@@ -418,7 +419,7 @@ export const DemoPage: React.FC = () => {
 
     await startBackendDemo();
   };
-  
+
   // ...
 
   // Handle user confirmation of decision (NEW)
@@ -442,24 +443,24 @@ export const DemoPage: React.FC = () => {
   // Run Market Sentinel analysis
   const runMarketSentinel = useCallback(async () => {
     if (marketSentinelLoading) return; // Prevent double clicks
-    
+
     setMarketSentinelLoading(true);
     setMarketSentinelError(null);
-    
+
     // Safety timeout to ensure loading state is reset
     const timeoutId = setTimeout(() => {
-        setMarketSentinelLoading(false);
+      setMarketSentinelLoading(false);
     }, 8000);
 
     try {
       let response: MarketSentinelResponse;
-      
+
       // If we have origin/destination, run with lane watchlist
       if (origin && destination) {
         // Extract port codes from names (e.g., "Shanghai" -> "CNSHA")
         const originCode = getPortCode(origin.name);
         const destinationCode = getPortCode(destination.name);
-        
+
         if (originCode && destinationCode) {
           const params = createLaneWatchlist(originCode, destinationCode);
           response = await runAnalysis(params);
@@ -469,7 +470,7 @@ export const DemoPage: React.FC = () => {
       } else {
         response = await runSimpleAnalysis();
       }
-      
+
       clearTimeout(timeoutId); // Clear safety timeout on success
       setMarketSentinelData(response);
     } catch (err) {
@@ -507,6 +508,59 @@ export const DemoPage: React.FC = () => {
     return portCodes[portName] || null;
   };
 
+  // Header Integration
+  const { setSubtitle, setExtraContent, resetHeader } = useHeader();
+
+  useEffect(() => {
+    if (demoStarted) {
+      setSubtitle(`${origin?.name} → ${destination?.name} · T+${currentTime.toFixed(0)}s · ${scenarioPhase}`);
+
+      setExtraContent(
+        <div className="flex items-center gap-3">
+          {isCotActive && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#4a90e2]/20 border border-[#4a90e2]/30 rounded-sm animate-pulse">
+              <Brain className="w-3.5 h-3.5 text-[#4a90e2]" />
+              <span className="text-xs text-[#4a90e2] font-medium">CoT Active</span>
+            </div>
+          )}
+
+          <button
+            onClick={() => setIsChangingRoute(true)}
+            className="px-3 py-1.5 rounded-sm text-xs font-medium transition-all flex items-center gap-2 bg-[#0a0e1a] border border-[#1a2332] text-white/60 hover:text-white/90 hover:border-[#4a90e2]/50"
+          >
+            <RefreshCw className="w-3.5 h-3.5" strokeWidth={2} />
+            Change Route
+          </button>
+
+          <div className="flex items-center gap-1 bg-[#0a0e1a] border border-[#1a2332] rounded-sm p-1">
+            <button
+              onClick={() => setIs3D(false)}
+              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-all flex items-center gap-2 ${!is3D ? 'bg-[#4a90e2]/20 text-[#4a90e2] border border-[#4a90e2]/30' : 'text-white/40 hover:text-white/60'
+                }`}
+            >
+              <Map className="w-3.5 h-3.5" strokeWidth={2} />
+              2D
+            </button>
+            <button
+              onClick={() => setIs3D(true)}
+              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-all flex items-center gap-2 ${is3D ? 'bg-[#4a90e2]/20 text-[#4a90e2] border border-[#4a90e2]/30' : 'text-white/40 hover:text-white/60'
+                }`}
+            >
+              <Globe className="w-3.5 h-3.5" strokeWidth={2} />
+              3D
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#5a9a7a]/20 border border-[#5a9a7a]/30 rounded-sm">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#5a9a7a] animate-pulse" />
+            <span className="text-xs text-[#5a9a7a] font-medium">System Running</span>
+          </div>
+        </div>
+      );
+    }
+    return () => resetHeader();
+  }, [demoStarted, currentTime, scenarioPhase, isCotActive, is3D, origin, destination]);
+
   if (!demoStarted) {
     return <DemoStartScreen onStart={handleStartDemo} />;
   }
@@ -529,74 +583,6 @@ export const DemoPage: React.FC = () => {
           onCancel={() => setIsChangingRoute(false)}
         />
       )}
-
-      {/* Header */}
-      <header className="h-14 bg-[#0f1621] border-b border-[#1a2332] px-6 flex items-center justify-between z-20">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0078d4] to-[#4a90e2] rounded-sm flex items-center justify-center shrink-0">
-            <Shield className="w-5 h-5 text-white" strokeWidth={2} />
-          </div>
-
-          <div className="min-w-0">
-                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300">
-                  Globot Shield
-                </h1>
-            <p className="text-xs text-white/40 truncate">
-              {origin?.name} → {destination?.name} · T+{currentTime.toFixed(0)}s · {scenarioPhase}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          {/* CoT Active Indicator */}
-          {isCotActive && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#4a90e2]/20 border border-[#4a90e2]/30 rounded-sm animate-pulse">
-              <Brain className="w-3.5 h-3.5 text-[#4a90e2]" />
-              <span className="text-xs text-[#4a90e2] font-medium">CoT Active</span>
-            </div>
-          )}
-
-          {/* Change Route Button */}
-          <button
-            onClick={() => setIsChangingRoute(true)}
-            className="px-3 py-1.5 rounded-sm text-xs font-medium transition-all flex items-center gap-2 bg-[#0a0e1a] border border-[#1a2332] text-white/60 hover:text-white/90 hover:border-[#4a90e2]/50"
-          >
-            <RefreshCw className="w-3.5 h-3.5" strokeWidth={2} />
-            Change Route
-          </button>
-
-          {/* 2D/3D Toggle */}
-          <div className="flex items-center gap-1 bg-[#0a0e1a] border border-[#1a2332] rounded-sm p-1">
-            <button
-              onClick={() => setIs3D(false)}
-              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-all flex items-center gap-2 ${
-                !is3D
-                  ? 'bg-[#4a90e2]/20 text-[#4a90e2] border border-[#4a90e2]/30'
-                  : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              <Map className="w-3.5 h-3.5" strokeWidth={2} />
-              2D
-            </button>
-            <button
-              onClick={() => setIs3D(true)}
-              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-all flex items-center gap-2 ${
-                is3D
-                  ? 'bg-[#4a90e2]/20 text-[#4a90e2] border border-[#4a90e2]/30'
-                  : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" strokeWidth={2} />
-              3D
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#5a9a7a]/20 border border-[#5a9a7a]/30 rounded-sm">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#5a9a7a] animate-pulse" />
-            <span className="text-xs text-[#5a9a7a] font-medium">System Running</span>
-          </div>
-        </div>
-      </header>
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -628,7 +614,7 @@ export const DemoPage: React.FC = () => {
               />
 
             )}
-            
+
 
           </div>
 
@@ -638,7 +624,7 @@ export const DemoPage: React.FC = () => {
             onMouseDown={handleBottomMouseDown}
           >
             <div className="w-16 h-1 bg-[#1a2332] group-hover:bg-[#4a90e2] rounded-full transition-colors" />
-            
+
             {/* Bottom Collapse Button */}
             <button
               onClick={(e) => {
@@ -652,16 +638,16 @@ export const DemoPage: React.FC = () => {
           </div>
 
           {/* Timeline */}
-          <div 
-            className="shrink-0 transition-all duration-300 ease-in-out border-t border-[#1a2332]" 
-            style={{ 
+          <div
+            className="shrink-0 transition-all duration-300 ease-in-out border-t border-[#1a2332]"
+            style={{
               height: isBottomCollapsed ? 0 : bottomHeight,
-              overflow: 'hidden' 
+              overflow: 'hidden'
             }}
           >
             <div style={{ height: bottomHeight }}>
-              <CrisisTimeline 
-                executionPhase={executionPhase} 
+              <CrisisTimeline
+                executionPhase={executionPhase}
                 onShipClick={setSelectedShip}
               />
             </div>
@@ -669,7 +655,7 @@ export const DemoPage: React.FC = () => {
         </div>
 
         {/* Resizable Right Sidebar */}
-        <div 
+        <div
           className="bg-[#0a0e1a] border-l border-[#1a2332] flex flex-col overflow-hidden relative transition-[width] duration-300 ease-in-out"
           style={{ width: isRightCollapsed ? 24 : sidebarWidth }}
         >
@@ -690,7 +676,7 @@ export const DemoPage: React.FC = () => {
           >
             {isRightCollapsed ? <ChevronLeft className="w-3 h-3 text-white/60" /> : <ChevronRight className="w-3 h-3 text-white/60" />}
           </button>
-          
+
           <div className={`flex-1 overflow-y-auto pr-2 pl-2 transition-opacity duration-200 ${isRightCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             {/* Azure stack badges */}
             <AzureBadges />
@@ -713,8 +699,8 @@ export const DemoPage: React.FC = () => {
             />
 
             {/* Agent workflow */}
-            <AgentWorkflow 
-              currentTime={currentTime} 
+            <AgentWorkflow
+              currentTime={currentTime}
               isLive={demoStarted}
               marketSentinelData={marketSentinelData}
               marketSentinelLoading={marketSentinelLoading}
@@ -726,9 +712,9 @@ export const DemoPage: React.FC = () => {
           {/* Collapsed Text */}
           {isRightCollapsed && (
             <div className="absolute top-10 w-full flex flex-col items-center gap-4 py-4">
-               <div className="[writing-mode:vertical-rl] rotate-180 text-xs font-medium text-white/40 tracking-wider whitespace-nowrap">
-                  INTELLIGENCE
-               </div>
+              <div className="[writing-mode:vertical-rl] rotate-180 text-xs font-medium text-white/40 tracking-wider whitespace-nowrap">
+                INTELLIGENCE
+              </div>
             </div>
           )}
         </div>
