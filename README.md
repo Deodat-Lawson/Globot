@@ -39,6 +39,12 @@
 - **决策确认**: AI 提出建议后，必须由人类点击 **"Approve & Execute"** 才能执行，体现负责任的 AI 原则。
 - **多种选择**: 提供 "Details" (查看详情) 和 "Override" (人工干预) 选项。
 
+### 5. 🔒 企业级身份验证与安全 (New)
+
+- **多渠道登录**: 集成 Clerk，支持 Google, Facebook, LinkedIn 社交登录及邮箱/短信验证码。
+- **管理员控制台**: 专为管理员设计的可视化看板，监控系统全局 KPI。
+- **安全白名单**: 基于环境变量的邮箱白名单系统，确保管理权限的隐私与安全。
+
 ## 🏗️ 技术架构 (演示专用版)
 
 ```mermaid
@@ -61,6 +67,8 @@ graph TD
     Client <-->|CoT Events / Actions| WS
     WS <--> Controller
     Controller -->|调用| Sentinel
+    Auth[Clerk Auth Service] --- Client
+    Auth --- MockServer
 ```
 
 - **前端**: React, TypeScript, Tailwind CSS, Deck.gl, Framer Motion.
@@ -94,6 +102,11 @@ python -m venv venv
 # 安装依赖
 pip install -r requirements.txt
 
+# 配置环境变量
+# 在 backend 目录下创建 .env 文件，参考核心配置：
+# CLERK_ISSUER_URL=...
+# ADMIN_WHITELIST=...
+
 # 启动服务器
 python start_server.py
 ```
@@ -101,9 +114,15 @@ _后端运行在 `http://localhost:8000`_
 
 ### 2. 启动前端
 
-```another bash
+```bash
 cd frontend
 npm install
+
+# 配置环境变量
+# 在 frontend 目录下创建 .env 文件：
+# VITE_CLERK_PUBLISHABLE_KEY=...
+# VITE_ADMIN_WHITELIST=...
+
 npm run dev
 ```
 _前端运行在 `http://localhost:5173`_
