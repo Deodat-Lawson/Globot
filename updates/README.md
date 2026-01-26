@@ -1,4 +1,4 @@
-# 🛡️ Globot: 全球贸易的 AI 守护盾 (v2.1.20260112)
+# 🛡️ Globot: 全球贸易的 AI 守护盾 (v2.3.20260124)
 
 > **Imagine Cup 2026 参赛作品 - "High-Fidelity Demo (高保真演示)" 版本**
 
@@ -8,7 +8,7 @@
 
 **Globot** 代表了全球贸易风险管理的范式转变。与传统的静态仪表盘不同，Globot 是一个 **Agentic AI (代理智能) 系统**，能够实时主动监控、分析并缓解供应链风险。
 
-此版本 (**v2.1.20260112**) 是专门构建的 **"High-Fidelity Mock (高保真模拟)"** 版本，旨在确保演示过程的绝对稳定和高冲击力。它模拟了一个逼真的 "下午 4:55 危机场景"（霍尔木兹海峡地缘危机），并完整展示了 **AI 思维链 (Chain-of-Thought)** 和 **人机共驾 (Human-in-the-Loop)** 决策过程。
+此版本 (**v2.3.20260124 - 地图重绘特别版**) 是专门构建的 **"High-Fidelity Mock (高保真模拟)"** 版本。本次更新核心在于 **2D/3D 地图引擎的全面重构**，引入了影院级的视觉效果、丝滑的交互体验和精确的地理参考系统。
 
 ## 🌟 核心功能 (v2.1 升级版)
 
@@ -39,11 +39,22 @@
 - **决策确认**: AI 提出建议后，必须由人类点击 **"Approve & Execute"** 才能执行，体现负责任的 AI 原则。
 - **多种选择**: 提供 "Details" (查看详情) 和 "Override" (人工干预) 选项。
 
-### 5. 🔒 企业级身份验证与安全 (New)
+### 5. 📚 智能知识库 (RAG Knowledge Base)
 
-- **多渠道登录**: 集成 Clerk，支持 Google, Facebook, LinkedIn 社交登录及邮箱/短信验证码。
-- **管理员控制台**: 专为管理员设计的可视化看板，监控系统全局 KPI。
-- **安全白名单**: 基于环境变量的邮箱白名单系统，确保管理权限的隐私与安全。
+- **Globot System KB**: 加载结构化知识库索引作为 Agent 的 System Prompt，指导 RAG 检索。
+- **Mock 数据集成**: 内置 24 个核心文档（HS Codes、Incoterms、Sanctions、Port Congestion、Freight Rates、Carrier Routes）。
+- **自动加载**: 后端启动时自动将 Mock 文档加载到 VectorStore，无需手动配置。
+
+### 6. 🌍 地图引擎重构 (v2.3 新增)
+
+- **2D/3D 一体化**: 全面升级 `GlobalMap2D` 和 `GlobalMap3D` 组件，视觉风格高度统一。
+- **交互优化**: 
+    - **3D**: 修复了 Z-fighting 屏闪问题，实现了丝滑的惯性缩放和左键旋转 (`dragPan`)。
+    - **2D**: 实现了标签智能防重叠 (`CollisionFilter`)，从根本上解决了密集区域文字遮挡问题。
+- **视觉增强**:
+    - **经纬网格**: 新增半透明白色经纬线及数字标签，提供精确地理参考。
+    - **标签分级**: 港口、海峡、国家名称采用统一的配色（红/橙/白）和粗体样式，层级分明。
+    - **动态参数**: 支持实时调节 Label Size 和 Ship Speed (范围扩展至 5-50)，满足不同演示需求。
 
 ## 🏗️ 技术架构 (演示专用版)
 
@@ -67,8 +78,6 @@ graph TD
     Client <-->|CoT Events / Actions| WS
     WS <--> Controller
     Controller -->|调用| Sentinel
-    Auth[Clerk Auth Service] --- Client
-    Auth --- MockServer
 ```
 
 - **前端**: React, TypeScript, Tailwind CSS, Deck.gl, Framer Motion.
@@ -79,35 +88,10 @@ graph TD
 
 ### 1. 启动后端
 
-#### 前置要求
-- Python 3.11
-
-#### 安装步骤
-
 ```bash
-# 进入后端目录
 cd backend
-
-# 创建虚拟环境（推荐）
-python -m venv venv
-
-# 激活虚拟环境
-# Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-# Windows CMD:
- venv\Scripts\activate.bat
-# macOS/Linux:
- source venv/bin/activate
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 配置环境变量
-# 在 backend 目录下创建 .env 文件，参考核心配置：
-# CLERK_ISSUER_URL=...
-# ADMIN_WHITELIST=...
-
-# 启动服务器
+# 确保安装了依赖
+# pip install -r requirements.txt
 python start_server.py
 ```
 _后端运行在 `http://localhost:8000`_
@@ -116,13 +100,6 @@ _后端运行在 `http://localhost:8000`_
 
 ```bash
 cd frontend
-npm install
-
-# 配置环境变量
-# 在 frontend 目录下创建 .env 文件：
-# VITE_CLERK_PUBLISHABLE_KEY=...
-# VITE_ADMIN_WHITELIST=...
-
 npm run dev
 ```
 _前端运行在 `http://localhost:5173`_
@@ -136,9 +113,13 @@ _前端运行在 `http://localhost:5173`_
 
 ## 📂 关键文件说明
 
-- `updates/README.md`: 详细的演示操作步骤说明（新用户必读）。
+- `操作指南.md`: 详细的演示操作步骤说明（新用户必读）。
 - `task.md`: 项目开发任务清单。
-- `updates/README.md`: 服务启动与故障排查速查表。
+- `开关.md`: 服务启动与故障排查速查表。
+- `Globot System Knowledge Base.JSON`: Agent 知识库索引（用于 System Prompt）。
+- `HS_Code_Mocktest.JSON`: HS Code 关税 Mock 数据。
+- `backend/services/mock_knowledge_base.py`: Mock 数据加载服务。
+- `backend/services/knowledge_base.py`: RAG 知识库核心服务（含 `get_globot_system_prompt()` 函数）。
 
 ---
 

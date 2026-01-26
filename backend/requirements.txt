@@ -19,7 +19,8 @@ pydantic_core==2.33.2
 crewai==1.7.2
 openai==1.83.0
 
-# Configuration
+# Security
+python-jose[cryptography]==3.3.0
 python-dotenv==1.1.1
 
 # WebSockets
