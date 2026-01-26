@@ -1,47 +1,19 @@
 """
 Maritime Knowledge Base Service - RAG for maritime regulations
-Uses ChromaDB for vector storage with hybrid search capabilities
+Uses ChromaDB for vector storage with Gemini embeddings
 """
 import logging
-import os
 import json
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
-
 from config import get_settings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
+from sentence_transformers import CrossEncoder
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-# Optional imports with graceful fallback
-try:
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-    from langchain_community.vectorstores import Chroma
-    from langchain_core.documents import Document
-    HAS_LANGCHAIN = True
-except ImportError:
-    HAS_LANGCHAIN = False
-    logger.warning("langchain_community not found. MaritimeKnowledgeBase will run in MOCK mode.")
-
-    # Mock Document class
-    class Document:
-        def __init__(self, page_content: str, metadata: Optional[Dict] = None):
-            self.page_content = page_content
-            self.metadata = metadata or {}
-
-try:
-    from rank_bm25 import BM25Okapi
-    HAS_BM25 = True
-except ImportError:
-    HAS_BM25 = False
-    logger.warning("rank_bm25 not found. BM25 hybrid search disabled.")
-
-try:
-    from sentence_transformers import CrossEncoder
-    HAS_RERANKER = True
-except ImportError:
-    HAS_RERANKER = False
-    logger.warning("sentence_transformers not found. Reranking disabled.")
 
 
 @dataclass
@@ -74,49 +46,32 @@ class MaritimeKnowledgeBase:
     }
 
     def __init__(self):
-        self.mock_mode = not HAS_LANGCHAIN
-        self.embeddings = None
-        self.collections: Dict[str, Any] = {}
+        """Initialize the Maritime Knowledge Base with Gemini embeddings."""
+        self.collections: Dict[str, Chroma] = {}
         self.reranker = None
         self.bm25_indices: Dict[str, Any] = {}
         self.doc_maps: Dict[str, Dict[str, Document]] = {}
 
-        if not self.mock_mode:
-            try:
-                # Initialize embedding model (English-focused for legal text)
-                self.embeddings = HuggingFaceEmbeddings(
-                    model_name="sentence-transformers/all-MiniLM-L6-v2"
-                )
+        # Initialize Gemini embeddings
+        self.embeddings = GoogleGenerativeAIEmbeddings(
+            model="gemini-embedding-001",
+            google_api_key=settings.google_api_key
+        )
 
-                # Initialize ChromaDB collections
-                persist_dir = settings.maritime_kb_persist_dir
-                os.makedirs(persist_dir, exist_ok=True)
+        # Create a Chroma collection for each defined collection
+        for collection_name in self.COLLECTIONS.keys():
+            self.collections[collection_name] = Chroma(
+                collection_name=collection_name,
+                embedding_function=self.embeddings,
+                chroma_cloud_api_key=settings.chroma_api_key,
+                tenant=settings.chroma_tenant,
+                database=settings.chroma_database,
+            )
+            logger.info(f"Initialized collection: {collection_name}")
 
-                for name in self.COLLECTIONS.keys():
-                    collection_dir = os.path.join(persist_dir, name)
-                    os.makedirs(collection_dir, exist_ok=True)
+        # Initialize cross-encoder reranker
+        self.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
-                    self.collections[name] = Chroma(
-                        persist_directory=collection_dir,
-                        embedding_function=self.embeddings,
-                        collection_name=name
-                    )
-
-                # Initialize reranker
-                if HAS_RERANKER:
-                    try:
-                        self.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
-                        logger.info("Reranker model loaded.")
-                    except Exception as e:
-                        logger.warning(f"Failed to load Reranker: {e}")
-
-                logger.info(f"MaritimeKnowledgeBase initialized with {len(self.collections)} collections")
-
-            except Exception as e:
-                logger.error(f"Failed to initialize MaritimeKnowledgeBase: {e}. Switching to MOCK mode.")
-                self.mock_mode = True
-        else:
-            logger.info("MaritimeKnowledgeBase initialized in MOCK mode.")
 
     def search_by_port(
         self,
@@ -132,9 +87,6 @@ class MaritimeKnowledgeBase:
             vessel_type: Optional vessel type filter
             top_k: Number of results to return
         """
-        if self.mock_mode:
-            return self._get_mock_port_results(port_code, vessel_type)
-
         # Build query and filters
         query = f"Port requirements regulations for port {port_code}"
         filters = {"port_code": port_code}
@@ -183,10 +135,6 @@ class MaritimeKnowledgeBase:
         Returns:
             Dict mapping port_code to list of applicable regulations
         """
-        if self.mock_mode:
-            return {port: self._get_mock_port_results(port, vessel_info.get("vessel_type"))
-                    for port in port_codes}
-
         route_results = {}
         vessel_type = vessel_info.get("vessel_type")
 
@@ -212,9 +160,6 @@ class MaritimeKnowledgeBase:
 
         Returns list of dicts with document_type, regulation_source, description
         """
-        if self.mock_mode:
-            return self._get_mock_required_documents(port_code, vessel_type)
-
         query = f"Required documents certificates for {vessel_type} vessel at port {port_code}"
 
         results = []
@@ -255,9 +200,6 @@ class MaritimeKnowledgeBase:
         top_k: int = 5
     ) -> List[SearchResult]:
         """Search for regional requirements (ECA, emissions, etc.)"""
-        if self.mock_mode:
-            return []
-
         query = f"Regional requirements for port {port_code} {vessel_info.get('vessel_type', '')} vessel"
 
         collection = self.collections.get("regional_requirements")
@@ -295,9 +237,6 @@ class MaritimeKnowledgeBase:
             top_k: Number of results
             collections: Optional list of collection names to search (default: all)
         """
-        if self.mock_mode:
-            return self._get_mock_general_results(query, filters)
-
         search_collections = collections or list(self.COLLECTIONS.keys())
 
         all_results = []
@@ -322,7 +261,7 @@ class MaritimeKnowledgeBase:
             except Exception as e:
                 logger.error(f"Error searching {collection_name}: {e}")
 
-        # Rerank if available
+        # Rerank results if reranker is available
         if self.reranker and len(all_results) > 0:
             all_results = self._rerank(query, all_results, top_k)
         else:
@@ -346,10 +285,6 @@ class MaritimeKnowledgeBase:
         Returns:
             Number of documents added
         """
-        if self.mock_mode:
-            logger.warning("Cannot add documents in MOCK mode")
-            return 0
-
         # Check if collection_name exists in the dictionary
         if collection_name not in self.collections:
             logger.error(f"Collection {collection_name} not found. Available: {list(self.collections.keys())}")
@@ -385,7 +320,7 @@ class MaritimeKnowledgeBase:
         top_k: int
     ) -> List[SearchResult]:
         """Rerank results using cross-encoder"""
-        if not self.reranker or len(results) == 0:
+        if len(results) == 0:
             return results[:top_k]
 
         pairs = [[query, r.content] for r in results]
@@ -413,89 +348,400 @@ class MaritimeKnowledgeBase:
         """Check if collection supports metadata filtering"""
         return True  # ChromaDB supports filtering
 
-    # ========== Mock Data Methods ==========
 
-    def _get_mock_port_results(
-        self,
-        port_code: str,
-        vessel_type: Optional[str]
-    ) -> List[SearchResult]:
-        """Generate mock port regulation results"""
-        mock_regulations = [
-            SearchResult(
-                content=f"All vessels calling at port {port_code} must provide 24-hour advance notice of arrival (ISPS Code requirement).",
-                metadata={"port_code": port_code, "regulation_type": "security", "source": "ISPS Code"},
-                score=0.95,
-                source="port_regulations"
-            ),
-            SearchResult(
-                content=f"Vessels must submit crew list and cargo manifest before arrival at {port_code}.",
-                metadata={"port_code": port_code, "regulation_type": "customs", "source": "Port Authority"},
-                score=0.90,
-                source="customs_documentation"
-            ),
-            SearchResult(
-                content=f"Port State Control inspections follow Paris MOU / Tokyo MOU guidelines. Vessels must have valid ISM and ISPS certificates.",
-                metadata={"port_code": port_code, "regulation_type": "psc", "source": "PSC Regime"},
-                score=0.88,
-                source="psc_requirements"
-            ),
-        ]
+# =============================================================================
+# Business-Friendly Query Methods
+# =============================================================================
 
-        if vessel_type == "tanker":
-            mock_regulations.append(SearchResult(
-                content=f"Tanker vessels at {port_code} must comply with MARPOL Annex I requirements for oil pollution prevention.",
-                metadata={"port_code": port_code, "vessel_type": "tanker", "source": "MARPOL Annex I"},
-                score=0.92,
-                source="imo_conventions"
-            ))
-
-        return mock_regulations
-
-    def _get_mock_required_documents(
-        self,
-        port_code: str,
-        vessel_type: str
-    ) -> List[Dict[str, Any]]:
-        """Generate mock required documents list"""
-        base_docs = [
-            {"document_type": "safety_certificate", "regulation_source": "SOLAS", "description": "Passenger Ship Safety Certificate or Cargo Ship Safety Equipment Certificate"},
-            {"document_type": "load_line_certificate", "regulation_source": "Load Line Convention", "description": "International Load Line Certificate"},
-            {"document_type": "marpol_certificate", "regulation_source": "MARPOL", "description": "International Oil Pollution Prevention Certificate (IOPP)"},
-            {"document_type": "ism_certificate", "regulation_source": "ISM Code", "description": "Safety Management Certificate (SMC) and Document of Compliance (DOC)"},
-            {"document_type": "isps_certificate", "regulation_source": "ISPS Code", "description": "International Ship Security Certificate (ISSC)"},
-            {"document_type": "crew_certificate", "regulation_source": "STCW", "description": "Valid certificates of competency for all crew"},
-            {"document_type": "registry_certificate", "regulation_source": "Flag State", "description": "Certificate of Registry"},
-            {"document_type": "tonnage_certificate", "regulation_source": "Tonnage Convention", "description": "International Tonnage Certificate"},
-            {"document_type": "insurance_certificate", "regulation_source": "CLC/Bunker Convention", "description": "Civil Liability Insurance Certificate"},
-        ]
-
-        # Add port-specific document
-        for doc in base_docs:
-            doc["port_code"] = port_code
-
-        return base_docs
-
-    def _get_mock_general_results(
+    def query_for_business(
         self,
         query: str,
-        filters: Optional[Dict]
-    ) -> List[SearchResult]:
-        """Generate mock general search results"""
-        return [
-            SearchResult(
-                content=f"[MOCK] Search result for query: {query}. SOLAS Chapter II-2 Regulation 10 requires fire-fighting appliances on all vessels.",
-                metadata={"source_convention": "SOLAS", "chapter": "II-2", "regulation": "10"},
-                score=0.85,
-                source="imo_conventions"
-            ),
-            SearchResult(
-                content=f"[MOCK] MARPOL Annex VI establishes regulations for the prevention of air pollution from ships, including SOx emission limits in ECAs.",
-                metadata={"source_convention": "MARPOL", "annex": "VI"},
-                score=0.80,
-                source="regional_requirements"
-            ),
-        ]
+        vessel_type: Optional[str] = None,
+        port_codes: Optional[List[str]] = None,
+        top_k: int = 10
+    ) -> Dict[str, Any]:
+        """
+        Process a natural language query and return a business-friendly structured response.
+        
+        This method transforms raw search results into actionable business intelligence
+        with clear categorization, priorities, and next steps.
+        
+        Args:
+            query: Natural language query from the user
+            vessel_type: Optional vessel type for filtering
+            port_codes: Optional list of relevant port codes
+            top_k: Number of results to consider
+            
+        Returns:
+            Structured dict with:
+            - query_summary: Brief interpretation of what was asked
+            - regulations: Relevant regulations found
+            - requirements: Specific requirements with applicability
+            - documents_needed: List of documents required
+            - action_items: Prioritized actions to take
+            - risk_factors: Potential risks identified
+            - sources: Source references for traceability
+        """
+        # Perform semantic search across all relevant collections
+        results = self.search_general(
+            query=query,
+            top_k=top_k
+        )
+        
+        # Parse and categorize results
+        regulations = []
+        documents_needed = set()
+        action_items = []
+        risk_factors = []
+        sources = set()
+        
+        for result in results:
+            # Extract regulation info
+            reg_info = {
+                "regulation": result.metadata.get("convention", result.metadata.get("source", result.source)),
+                "title": result.metadata.get("chapter_title", result.metadata.get("title", "Maritime Regulation")),
+                "content": result.content[:500],
+                "applicability": result.metadata.get("applicability", "All vessels"),
+                "requirement_type": result.metadata.get("requirement_type", "MANDATORY"),
+                "relevance_score": round(result.score, 2),
+            }
+            regulations.append(reg_info)
+            
+            # Extract document requirements
+            if "required_documents" in result.metadata:
+                docs = result.metadata["required_documents"]
+                if isinstance(docs, str):
+                    try:
+                        docs = json.loads(docs)
+                    except:
+                        docs = [docs]
+                for doc in docs:
+                    documents_needed.add(doc)
+            
+            # Extract certificate mentions from content
+            cert_keywords = ["Certificate", "Document", "Record Book", "Plan", "Manual"]
+            for keyword in cert_keywords:
+                if keyword.lower() in result.content.lower():
+                    # Try to extract the full certificate name
+                    content_lower = result.content.lower()
+                    idx = content_lower.find(keyword.lower())
+                    if idx > 0:
+                        # Look for certificate name before the keyword
+                        start = max(0, idx - 50)
+                        snippet = result.content[start:idx + len(keyword)]
+                        # Simple extraction - look for capitalized words before keyword
+                        pass
+            
+            # Add sources
+            source = result.metadata.get("source_document", result.metadata.get("convention", result.source))
+            sources.add(source)
+            
+            # Identify risks based on content
+            risk_keywords = ["detention", "penalty", "fine", "deficiency", "violation", "non-compliance"]
+            for keyword in risk_keywords:
+                if keyword in result.content.lower():
+                    risk_factors.append({
+                        "risk": f"Potential {keyword} risk identified",
+                        "context": result.content[:200],
+                        "source": source,
+                    })
+                    break
+        
+        # Generate action items based on findings
+        if documents_needed:
+            action_items.append({
+                "priority": "HIGH",
+                "category": "Documentation",
+                "action": f"Ensure the following documents are current and available: {', '.join(list(documents_needed)[:5])}",
+                "reason": "Required by identified regulations",
+            })
+        
+        if risk_factors:
+            action_items.append({
+                "priority": "CRITICAL",
+                "category": "Compliance",
+                "action": "Review identified risk areas and ensure full compliance",
+                "reason": f"{len(risk_factors)} potential risk factor(s) identified",
+            })
+        
+        # Build response
+        return {
+            "query_summary": f"Found {len(results)} relevant regulations for: {query}",
+            "regulations": regulations[:5],  # Top 5 most relevant
+            "requirements": [
+                {
+                    "requirement": reg["title"],
+                    "regulation": reg["regulation"],
+                    "applicability": reg["applicability"],
+                    "type": reg["requirement_type"],
+                }
+                for reg in regulations[:5]
+            ],
+            "documents_needed": list(documents_needed)[:10],
+            "action_items": action_items,
+            "risk_factors": risk_factors[:3],
+            "sources": list(sources),
+            "metadata": {
+                "total_results": len(results),
+                "query": query,
+                "vessel_type": vessel_type,
+                "ports": port_codes,
+            }
+        }
+
+    def get_structured_port_requirements(
+        self,
+        port_code: str,
+        vessel_type: str = "cargo_ship"
+    ) -> Dict[str, Any]:
+        """
+        Get structured, business-friendly port requirements.
+        
+        Returns comprehensive port requirements organized by category
+        with clear compliance steps.
+        """
+        # Search for port-specific requirements
+        port_results = self.search_by_port(port_code, vessel_type, top_k=10)
+        required_docs = self.search_required_documents(port_code, vessel_type)
+        regional_results = self.search_regional_requirements(
+            port_code, {"vessel_type": vessel_type}, top_k=5
+        )
+        
+        # Categorize requirements
+        pre_arrival = []
+        documentation = []
+        environmental = []
+        safety = []
+        customs = []
+        
+        for result in port_results:
+            content_lower = result.content.lower()
+            
+            req_info = {
+                "requirement": result.metadata.get("requirement_name", "Port Requirement"),
+                "description": result.content[:300],
+                "source": result.metadata.get("source", result.source),
+                "mandatory": result.metadata.get("requirement_type", "MANDATORY") == "MANDATORY",
+            }
+            
+            # Categorize based on content
+            if any(kw in content_lower for kw in ["pre-arrival", "notice", "notification", "48 hours", "24 hours", "96 hours"]):
+                pre_arrival.append(req_info)
+            elif any(kw in content_lower for kw in ["emission", "eca", "sulphur", "scrubber", "ballast"]):
+                environmental.append(req_info)
+            elif any(kw in content_lower for kw in ["safety", "solas", "fire", "life-saving"]):
+                safety.append(req_info)
+            elif any(kw in content_lower for kw in ["customs", "declaration", "manifest", "cargo"]):
+                customs.append(req_info)
+            else:
+                documentation.append(req_info)
+        
+        # Build action checklist
+        checklist = []
+        checklist.append({
+            "phase": "Before Voyage",
+            "actions": [
+                "Verify all certificates are valid and will not expire during voyage",
+                "Confirm vessel meets port-specific requirements",
+                "Prepare all required documentation",
+            ]
+        })
+        
+        if pre_arrival:
+            checklist.append({
+                "phase": "Pre-Arrival",
+                "actions": [req["requirement"] for req in pre_arrival]
+            })
+        
+        checklist.append({
+            "phase": "On Arrival",
+            "actions": [
+                "Have all documents ready for PSC inspection",
+                "Ensure environmental compliance (fuel, emissions)",
+                "Complete customs declarations",
+            ]
+        })
+        
+        return {
+            "port_code": port_code,
+            "port_name": self._get_port_name_from_code(port_code),
+            "vessel_type": vessel_type,
+            "summary": f"Found {len(port_results)} requirements for {port_code}",
+            
+            "requirements_by_category": {
+                "pre_arrival": pre_arrival,
+                "documentation": documentation,
+                "environmental": environmental,
+                "safety": safety,
+                "customs": customs,
+            },
+            
+            "required_documents": required_docs,
+            
+            "regional_requirements": [
+                {
+                    "requirement": r.metadata.get("requirement_name", "Regional Requirement"),
+                    "description": r.content[:200],
+                    "source": r.metadata.get("convention", r.source),
+                }
+                for r in regional_results
+            ],
+            
+            "compliance_checklist": checklist,
+            
+            "total_requirements": len(port_results),
+        }
+
+    def get_compliance_summary_for_route(
+        self,
+        port_codes: List[str],
+        vessel_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Generate a business-friendly compliance summary for an entire route.
+        
+        Returns a structured report with:
+        - Route overview
+        - Port-by-port requirements
+        - Common requirements across all ports
+        - Prioritized action items
+        - Risk assessment
+        """
+        vessel_type = vessel_info.get("vessel_type", "cargo_ship")
+        
+        # Get requirements for each port
+        route_requirements = self.search_by_route(port_codes, vessel_info, top_k_per_port=5)
+        
+        # Analyze route
+        port_summaries = {}
+        all_documents = set()
+        all_risks = []
+        
+        for port_code, results in route_requirements.items():
+            port_docs = []
+            port_risks = []
+            
+            for result in results:
+                # Collect documents
+                if "required_documents" in result.metadata:
+                    docs = result.metadata["required_documents"]
+                    if isinstance(docs, str):
+                        try:
+                            docs = json.loads(docs)
+                        except:
+                            docs = [docs]
+                    for doc in docs:
+                        all_documents.add(doc)
+                        port_docs.append(doc)
+                
+                # Check for risk indicators
+                if any(kw in result.content.lower() for kw in ["detention", "deficiency", "fine", "penalty"]):
+                    port_risks.append({
+                        "port": port_code,
+                        "risk": result.content[:150],
+                        "source": result.source,
+                    })
+                    all_risks.append(port_risks[-1])
+            
+            port_summaries[port_code] = {
+                "port_name": self._get_port_name_from_code(port_code),
+                "requirements_count": len(results),
+                "documents_needed": list(set(port_docs)),
+                "risk_level": "HIGH" if port_risks else "MEDIUM" if len(results) > 5 else "LOW",
+            }
+        
+        # Generate prioritized actions
+        actions = []
+        
+        if all_documents:
+            actions.append({
+                "priority": "HIGH",
+                "action": f"Ensure these documents are valid: {', '.join(list(all_documents)[:5])}{'...' if len(all_documents) > 5 else ''}",
+                "applies_to": "All ports",
+            })
+        
+        # Check for ECA ports
+        eca_ports = [p for p in port_codes if self._is_eca_port(p)]
+        if eca_ports:
+            actions.append({
+                "priority": "CRITICAL",
+                "action": f"Verify ECA compliance for ports: {', '.join(eca_ports)}",
+                "applies_to": eca_ports,
+                "details": "Ensure fuel sulphur content ≤0.10% or operational scrubber",
+            })
+        
+        # Check for EU ports
+        eu_ports = [p for p in port_codes if self._is_eu_port(p)]
+        if eu_ports:
+            actions.append({
+                "priority": "HIGH",
+                "action": f"Verify EU MRV/ETS compliance for ports: {', '.join(eu_ports)}",
+                "applies_to": eu_ports,
+                "details": "Ensure EU MRV monitoring plan and ETS allowances are in order",
+            })
+        
+        return {
+            "route": port_codes,
+            "vessel_type": vessel_type,
+            "total_ports": len(port_codes),
+            
+            "executive_summary": {
+                "total_requirements_found": sum(len(r) for r in route_requirements.values()),
+                "documents_needed": len(all_documents),
+                "risks_identified": len(all_risks),
+                "eca_ports": len(eca_ports),
+                "eu_ports": len(eu_ports),
+            },
+            
+            "port_summaries": port_summaries,
+            
+            "common_documents": list(all_documents)[:15],
+            
+            "prioritized_actions": sorted(actions, key=lambda x: {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}.get(x["priority"], 4)),
+            
+            "risk_factors": all_risks[:5],
+            
+            "recommendations": [
+                "Review all certificates at least 30 days before voyage",
+                "Verify fuel compliance for ECA zones" if eca_ports else None,
+                "Ensure EU MRV monitoring plan is updated" if eu_ports else None,
+                "Prepare pre-arrival notifications according to each port's requirements",
+            ],
+        }
+
+    def _get_port_name_from_code(self, port_code: str) -> str:
+        """Get port name from code"""
+        port_names = {
+            "SGSIN": "Port of Singapore",
+            "NLRTM": "Port of Rotterdam",
+            "DEHAM": "Port of Hamburg",
+            "CNSHA": "Port of Shanghai",
+            "HKHKG": "Port of Hong Kong",
+            "USNYC": "Port of New York",
+            "USLAX": "Port of Los Angeles",
+            "BEANR": "Port of Antwerp",
+            "GBFXT": "Port of Felixstowe",
+            "FIHEL": "Port of Helsinki",
+            "SEGOT": "Port of Gothenburg",
+        }
+        return port_names.get(port_code, f"Port {port_code}")
+
+    def _is_eca_port(self, port_code: str) -> bool:
+        """Check if port is in an Emission Control Area"""
+        eca_ports = {
+            # Baltic Sea ECA
+            "FIHEL", "SEGOT", "DKCPH", "PLGDN", "EETAL", "RULED",
+            # North Sea ECA
+            "NLRTM", "DEHAM", "BEANR", "GBFXT", "GBSOU",
+            # North American ECA
+            "USLAX", "USNYC", "USHOU", "CAHAL", "CAVAN",
+        }
+        return port_code in eca_ports
+
+    def _is_eu_port(self, port_code: str) -> bool:
+        """Check if port is subject to EU regulations"""
+        eu_country_codes = {"NL", "DE", "BE", "FR", "ES", "IT", "PT", "GR", "PL", "SE", "FI", "DK", "IE", "EE", "LV", "LT", "HR", "SI", "CY", "MT", "RO", "BG"}
+        return port_code[:2] in eu_country_codes
 
 
 # Singleton instance

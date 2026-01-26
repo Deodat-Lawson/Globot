@@ -23,21 +23,15 @@ except ImportError:
     logger.warning("crewai not found. Maritime compliance crew will not be available.")
 
 
-def test_openai_connection(model: str, timeout: int = 10) -> None:
-    """Test OpenAI connection before initializing crew"""
-    from openai import OpenAI
-    client = OpenAI(timeout=timeout, max_retries=0)
-    start = time.time()
+def test_gemini_connection(api_key: str, timeout: int = 10) -> None:
+    """Test Google Gemini connection before initializing crew"""
+    import google.generativeai as genai
+    genai.configure(api_key=api_key)
     try:
-        client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": "ping"}],
-        )
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        model.generate_content("ping", request_options={"timeout": timeout})
     except Exception as e:
-        latency = round(time.time() - start, 3)
-        raise RuntimeError(
-            f"OpenAI health check failed after {latency}s: {type(e).__name__}: {e}"
-        ) from e
+        raise RuntimeError(f"Gemini health check failed: {type(e).__name__}: {e}") from e
 
 
 MARITIME_COMPLIANCE_RULES = """You MUST follow these maritime compliance rules:
@@ -52,21 +46,29 @@ Keep outputs concise and actionable.
 
 
 def _init_llm():
-    """Initialize LLM for CrewAI"""
+    """Initialize LLM for CrewAI - uses Google Gemini by default"""
     if not HAS_CREWAI:
         raise RuntimeError("CrewAI not installed")
 
-    model_name = settings.openai_model or "gpt-4o-mini"
+    # Try Google Gemini first (preferred)
+    if settings.google_api_key:
+        os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key)
+        # Test connection
+        test_gemini_connection(api_key=settings.google_api_key)
+        return LLM(
+            model="gemini/gemini-2.0-flash",
+            api_key=settings.google_api_key
+        )
 
+    # Fall back to OpenAI if configured
     if settings.openai_api_key:
         os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
-    if settings.openai_base_url:
-        os.environ.setdefault("OPENAI_BASE_URL", settings.openai_base_url)
+        if settings.openai_base_url:
+            os.environ.setdefault("OPENAI_BASE_URL", settings.openai_base_url)
+        model_name = settings.openai_model or "gpt-4o-mini"
+        return LLM(model=model_name)
 
-    # Test connection
-    test_openai_connection(model=model_name)
-
-    return LLM(model=model_name)
+    raise RuntimeError("No LLM API key configured. Set GOOGLE_API_KEY or OPENAI_API_KEY.")
 
 
 def build_maritime_compliance_crew(

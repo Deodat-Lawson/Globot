@@ -13,13 +13,24 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import (
-    Vessel, UserDocument, Port, ComplianceCheck,
-    VesselType, DocumentType, ComplianceStatus
+    Vessel, UserDocument, Port, VesselType, DocumentType
 )
 from services.document_service import DocumentService
-from services.compliance_service import ComplianceService, RouteComplianceResult
+from services.compliance_service import ComplianceService
 from services.maritime_knowledge_base import get_maritime_knowledge_base
+from services.compliance_report_generator import get_compliance_report_generator
 from core.crew_maritime_compliance import get_compliance_orchestrator
+from core.crew_document_agents import get_document_analysis_orchestrator
+from models.compliance_report import (
+    ComplianceReport,
+    ComplianceStatus,
+    Priority,
+    RiskLevel,
+    QuickComplianceCheck,
+    RegulationQueryResponse,
+    PortQueryResponse,
+    ActionItem,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +141,52 @@ class KBSearchResponse(BaseModel):
     results: List[dict]
     query: str
     total_found: int
+
+
+class DocumentAnalysisRequest(BaseModel):
+    """Request model for document analysis with CrewAI agents"""
+    vessel_id: int
+    port_codes: List[str] = Field(..., min_length=1, description="List of UN/LOCODE port codes")
+    document_ids: Optional[List[int]] = Field(None, description="Specific document IDs to analyze (default: all vessel docs)")
+
+
+class DocumentSummary(BaseModel):
+    """Summary of a document"""
+    document_type: str
+    expiry_date: Optional[str] = None
+    status: str  # valid, expired, expiring_soon
+    days_until_expiry: Optional[int] = None
+
+
+class MissingDocument(BaseModel):
+    """Missing document info"""
+    document_type: str
+    required_by: List[str]  # Regulations or ports requiring it
+    priority: str  # CRITICAL, HIGH, MEDIUM
+
+
+class Recommendation(BaseModel):
+    """Recommendation from analysis"""
+    priority: str  # CRITICAL, HIGH, MEDIUM
+    action: str
+    documents: List[str]
+    deadline: Optional[str] = None
+
+
+class DocumentAnalysisResponse(BaseModel):
+    """Response model for document analysis"""
+    success: bool
+    overall_status: str  # COMPLIANT, PARTIAL, NON_COMPLIANT, ERROR
+    compliance_score: int = Field(ge=0, le=100)
+    documents_analyzed: int
+    valid_documents: List[DocumentSummary]
+    expiring_soon_documents: List[DocumentSummary]
+    expired_documents: List[DocumentSummary]
+    missing_documents: List[MissingDocument]
+    recommendations: List[Recommendation]
+    agent_reasoning: Optional[str] = None
+    vessel_info: dict
+    route_ports: List[str]
 
 
 # ========== Vessel Management Endpoints ==========
@@ -379,6 +436,173 @@ async def delete_document(document_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Document not found")
 
     return {"status": "deleted", "document_id": document_id}
+
+
+@router.post("/documents/analyze", response_model=DocumentAnalysisResponse)
+async def analyze_documents_with_agents(
+    request: DocumentAnalysisRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Analyze vessel documents using CrewAI agents.
+
+    This endpoint runs a 3-agent crew:
+    1. Document Analyzer - Classifies documents and extracts metadata
+    2. Requirements Researcher - Determines required documents based on vessel/route
+    3. Gap Analyst - Compares documents against requirements and provides recommendations
+
+    Users upload documents first, then call this endpoint to get AI-driven analysis
+    of what documents are present, missing, or expired.
+    """
+    # Validate vessel exists
+    vessel = db.query(Vessel).filter(Vessel.id == request.vessel_id).first()
+    if not vessel:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+
+    # Get orchestrator
+    orchestrator = get_document_analysis_orchestrator()
+
+    if not orchestrator.is_available:
+        raise HTTPException(
+            status_code=503,
+            detail="Document analysis service not available. Check CrewAI configuration."
+        )
+
+    # Prepare vessel info
+    vessel_info = {
+        "name": vessel.name,
+        "imo_number": vessel.imo_number,
+        "vessel_type": vessel.vessel_type.value if vessel.vessel_type else "container",
+        "flag_state": vessel.flag_state,
+        "gross_tonnage": vessel.gross_tonnage,
+    }
+
+    # Get documents
+    doc_service = DocumentService(db)
+
+    if request.document_ids:
+        # Get specific documents
+        documents = []
+        for doc_id in request.document_ids:
+            doc = doc_service.get_document(doc_id)
+            if doc and doc.vessel_id == request.vessel_id:
+                documents.append(doc)
+    else:
+        # Get all vessel documents
+        documents = doc_service.get_vessel_documents(request.vessel_id)
+
+    if not documents:
+        raise HTTPException(
+            status_code=400,
+            detail="No documents found for this vessel. Please upload documents first."
+        )
+
+    # Prepare document texts for analysis
+    document_texts = [
+        {
+            "id": str(d.id),
+            "filename": d.file_name or f"document_{d.id}",
+            "file_type": d.mime_type or "application/pdf",
+            "ocr_text": d.extracted_text or "",
+            "document_type": d.document_type.value if d.document_type else "unknown",
+            "expiry_date": d.expiry_date.strftime("%Y-%m-%d") if d.expiry_date else None,
+        }
+        for d in documents
+    ]
+
+    # Run CrewAI analysis
+    result = await orchestrator.analyze_documents(
+        document_texts=document_texts,
+        vessel_info=vessel_info,
+        route_ports=request.port_codes
+    )
+
+    if not result.get("success"):
+        return DocumentAnalysisResponse(
+            success=False,
+            overall_status="ERROR",
+            compliance_score=0,
+            documents_analyzed=len(documents),
+            valid_documents=[],
+            expiring_soon_documents=[],
+            expired_documents=[],
+            missing_documents=[],
+            recommendations=[],
+            agent_reasoning=result.get("error", "Unknown error"),
+            vessel_info=vessel_info,
+            route_ports=request.port_codes
+        )
+
+    # Parse the result
+    parsed = result.get("parsed_result") or {}
+
+    # Extract data from parsed result or provide defaults
+    valid_docs = []
+    expiring_docs = []
+    expired_docs = []
+    missing_docs = []
+    recommendations = []
+    compliance_score = parsed.get("compliance_score", 0)
+    overall_status = parsed.get("overall_status", "PENDING_REVIEW")
+
+    # Process valid documents
+    for doc in parsed.get("valid_documents", []):
+        valid_docs.append(DocumentSummary(
+            document_type=doc.get("document_type", "unknown"),
+            expiry_date=doc.get("expiry_date"),
+            status="valid",
+            days_until_expiry=doc.get("days_until_expiry")
+        ))
+
+    # Process expiring soon documents
+    for doc in parsed.get("expiring_soon", parsed.get("expiring_soon_documents", [])):
+        expiring_docs.append(DocumentSummary(
+            document_type=doc.get("document_type", "unknown"),
+            expiry_date=doc.get("expiry_date"),
+            status="expiring_soon",
+            days_until_expiry=doc.get("days_until_expiry")
+        ))
+
+    # Process expired documents
+    for doc in parsed.get("expired_documents", []):
+        expired_docs.append(DocumentSummary(
+            document_type=doc.get("document_type", "unknown"),
+            expiry_date=doc.get("expiry_date"),
+            status="expired",
+            days_until_expiry=doc.get("days_until_expiry")
+        ))
+
+    # Process missing documents
+    for doc in parsed.get("missing_documents", []):
+        missing_docs.append(MissingDocument(
+            document_type=doc.get("document_type", "unknown"),
+            required_by=doc.get("required_by", doc.get("ports_affected", ["Unknown"])),
+            priority=doc.get("priority", "HIGH")
+        ))
+
+    # Process recommendations
+    for rec in parsed.get("recommendations", []):
+        recommendations.append(Recommendation(
+            priority=rec.get("priority", "MEDIUM"),
+            action=rec.get("action", ""),
+            documents=rec.get("documents", []),
+            deadline=rec.get("deadline")
+        ))
+
+    return DocumentAnalysisResponse(
+        success=True,
+        overall_status=overall_status,
+        compliance_score=int(compliance_score),
+        documents_analyzed=len(documents),
+        valid_documents=valid_docs,
+        expiring_soon_documents=expiring_docs,
+        expired_documents=expired_docs,
+        missing_documents=missing_docs,
+        recommendations=recommendations,
+        agent_reasoning=result.get("crew_output"),
+        vessel_info=vessel_info,
+        route_ports=request.port_codes
+    )
 
 
 # ========== Compliance Checking Endpoints ==========
@@ -652,7 +876,7 @@ async def get_knowledge_base_stats():
     return {
         "collections": stats,
         "total_documents": sum(stats.values()),
-        "mock_mode": kb.mock_mode,
+        "embeddings_configured": kb.embeddings is not None,
     }
 
 
@@ -712,20 +936,281 @@ async def get_port(port_code: str, db: Session = Depends(get_db)):
     }
 
 
+# ========== Structured Business Reports Endpoints ==========
+
+class BusinessQueryRequest(BaseModel):
+    """Request model for business-friendly knowledge base queries"""
+    query: str = Field(..., min_length=3, description="Natural language query")
+    vessel_type: Optional[str] = Field(None, description="Vessel type for context")
+    port_codes: Optional[List[str]] = Field(None, description="Relevant port codes")
+    top_k: int = Field(default=10, ge=1, le=20)
+
+
+class StructuredReportRequest(BaseModel):
+    """Request model for full structured compliance report"""
+    vessel_id: int
+    port_codes: List[str] = Field(..., min_length=1)
+    voyage_start_date: Optional[str] = Field(None, description="ISO date format: YYYY-MM-DD")
+    include_documents: bool = Field(default=True, description="Include user document analysis")
+
+
+@router.post("/reports/query", summary="Query regulations with business-friendly response")
+async def query_regulations_for_business(request: BusinessQueryRequest):
+    """
+    Query maritime regulations and get a structured, business-friendly response.
+    
+    Returns:
+    - Relevant regulations categorized by priority
+    - Required documents identified
+    - Prioritized action items
+    - Risk factors
+    - Source references
+    
+    This endpoint is designed for business users who need actionable compliance information.
+    """
+    kb = get_maritime_knowledge_base()
+    
+    result = kb.query_for_business(
+        query=request.query,
+        vessel_type=request.vessel_type,
+        port_codes=request.port_codes,
+        top_k=request.top_k
+    )
+    
+    return result
+
+
+@router.get("/reports/port/{port_code}", summary="Get structured port requirements")
+async def get_structured_port_report(
+    port_code: str,
+    vessel_type: str = Query(default="cargo_ship", description="Vessel type")
+):
+    """
+    Get comprehensive, structured port requirements for business users.
+    
+    Returns requirements organized by category:
+    - Pre-arrival requirements
+    - Documentation requirements
+    - Environmental requirements
+    - Safety requirements
+    - Customs requirements
+    
+    Also includes a compliance checklist with phased actions.
+    """
+    kb = get_maritime_knowledge_base()
+    
+    result = kb.get_structured_port_requirements(
+        port_code=port_code,
+        vessel_type=vessel_type
+    )
+    
+    return result
+
+
+@router.post("/reports/route-summary", summary="Get structured route compliance summary")
+async def get_route_compliance_summary(
+    port_codes: List[str] = Query(..., description="Port codes in route order"),
+    vessel_type: str = Query(default="cargo_ship"),
+    gross_tonnage: Optional[float] = Query(None),
+    flag_state: Optional[str] = Query(None)
+):
+    """
+    Generate a business-friendly compliance summary for an entire route.
+    
+    Returns:
+    - Executive summary with key metrics
+    - Port-by-port requirement summaries
+    - Common documents needed across all ports
+    - Prioritized action items
+    - Risk assessment
+    - Recommendations
+    
+    Ideal for voyage planning and compliance review meetings.
+    """
+    kb = get_maritime_knowledge_base()
+    
+    vessel_info = {
+        "vessel_type": vessel_type,
+        "gross_tonnage": gross_tonnage,
+        "flag_state": flag_state,
+    }
+    
+    result = kb.get_compliance_summary_for_route(
+        port_codes=port_codes,
+        vessel_info=vessel_info
+    )
+    
+    return result
+
+
+@router.post("/reports/compliance-report", response_model=ComplianceReport, summary="Generate full compliance report")
+async def generate_full_compliance_report(
+    request: StructuredReportRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a comprehensive structured compliance report for a vessel and route.
+    
+    This is the most complete report format, including:
+    - Executive summary with compliance score and risk level
+    - Document gap analysis (if documents are uploaded)
+    - Port-by-port requirements
+    - IMO convention requirements
+    - Regional requirements (EU MRV, ECA, etc.)
+    - Risk assessments with probability and impact
+    - Prioritized action items with deadlines
+    - Compliance timeline
+    
+    The report follows the ComplianceReport model structure, making it
+    suitable for programmatic processing or display in business dashboards.
+    """
+    # Validate vessel exists
+    vessel = db.query(Vessel).filter(Vessel.id == request.vessel_id).first()
+    if not vessel:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+    
+    # Parse voyage start date
+    voyage_start = None
+    if request.voyage_start_date:
+        try:
+            from datetime import date
+            voyage_start = date.fromisoformat(request.voyage_start_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    # Prepare vessel info
+    vessel_info = {
+        "vessel_name": vessel.name,
+        "imo_number": vessel.imo_number,
+        "vessel_type": vessel.vessel_type.value if vessel.vessel_type else "cargo_ship",
+        "flag_state": vessel.flag_state,
+        "gross_tonnage": vessel.gross_tonnage,
+        "year_built": vessel.year_built,
+        "classification_society": vessel.classification_society,
+    }
+    
+    # Get user documents if requested
+    user_documents = []
+    if request.include_documents:
+        doc_service = DocumentService(db)
+        docs = doc_service.get_vessel_documents(request.vessel_id)
+        user_documents = [
+            {
+                "document_type": d.document_type.value if d.document_type else "other",
+                "expiry_date": d.expiry_date.date() if d.expiry_date else None,
+            }
+            for d in docs
+        ]
+    
+    # Generate the report
+    report_generator = get_compliance_report_generator()
+    
+    report = report_generator.generate_compliance_report(
+        vessel_info=vessel_info,
+        route_ports=request.port_codes,
+        user_documents=user_documents,
+        voyage_start_date=voyage_start
+    )
+    
+    return report
+
+
+@router.get("/reports/quick-check", response_model=QuickComplianceCheck, summary="Quick compliance check for a query")
+async def quick_compliance_check(
+    query: str = Query(..., min_length=3, description="Compliance question"),
+    vessel_type: Optional[str] = Query(None),
+    port_code: Optional[str] = Query(None)
+):
+    """
+    Perform a quick compliance check based on a natural language query.
+    
+    Examples:
+    - "What certificates do I need for a container ship going to Rotterdam?"
+    - "Do I need a scrubber for Baltic Sea ECA?"
+    - "What are the pre-arrival requirements for Singapore?"
+    
+    Returns a quick assessment with:
+    - Status (COMPLIANT, PARTIAL, NON_COMPLIANT, PENDING_REVIEW)
+    - Key findings
+    - Required documents
+    - Action items
+    - Risk level
+    """
+    kb = get_maritime_knowledge_base()
+    
+    # Search knowledge base
+    business_result = kb.query_for_business(
+        query=query,
+        vessel_type=vessel_type,
+        port_codes=[port_code] if port_code else None,
+        top_k=5
+    )
+    
+    # Analyze results to determine compliance status
+    findings = []
+    required_docs = business_result.get("documents_needed", [])
+    action_items = []
+    
+    # Extract findings from regulations
+    for reg in business_result.get("regulations", []):
+        findings.append(f"{reg['regulation']}: {reg['title']}")
+    
+    # Convert action items to proper format
+    for action in business_result.get("action_items", []):
+        action_items.append(ActionItem(
+            action_id=f"QC-{len(action_items)+1:03d}",
+            priority=Priority(action.get("priority", "MEDIUM")),
+            category=action.get("category", "General"),
+            action=action.get("action", ""),
+            reason=action.get("reason", ""),
+            regulation_reference="See sources",
+        ))
+    
+    # Determine overall status and risk level
+    risk_factors = business_result.get("risk_factors", [])
+    
+    if risk_factors:
+        status = ComplianceStatus.PENDING_REVIEW
+        risk_level = RiskLevel.HIGH
+    elif required_docs:
+        status = ComplianceStatus.PARTIAL
+        risk_level = RiskLevel.MEDIUM
+    else:
+        status = ComplianceStatus.PENDING_REVIEW
+        risk_level = RiskLevel.LOW
+    
+    # Calculate confidence based on results
+    total_results = business_result.get("metadata", {}).get("total_results", 0)
+    confidence = min(0.9, total_results * 0.1) if total_results > 0 else 0.3
+    
+    return QuickComplianceCheck(
+        query=query,
+        status=status,
+        findings=findings[:5],
+        required_documents=required_docs[:10],
+        action_items=action_items,
+        risk_level=risk_level,
+        confidence=confidence,
+        sources=business_result.get("sources", [])
+    )
+
+
 # ========== Health Check ==========
 
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
     kb = get_maritime_knowledge_base()
-    orchestrator = get_compliance_orchestrator()
+    compliance_orchestrator = get_compliance_orchestrator()
+    document_orchestrator = get_document_analysis_orchestrator()
 
     return {
         "status": "healthy",
         "knowledge_base": {
             "collections": list(kb.COLLECTIONS.keys()),
-            "mock_mode": kb.mock_mode,
+            "embeddings_configured": kb.embeddings is not None,
         },
-        "crewai_available": orchestrator.is_available,
+        "crewai_compliance_available": compliance_orchestrator.is_available,
+        "crewai_document_analysis_available": document_orchestrator.is_available,
         "timestamp": datetime.now().isoformat(),
     }

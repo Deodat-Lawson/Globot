@@ -6,6 +6,7 @@ import './App.css';
 import { DemoPage } from './pages/DemoPage';
 import { PaymentPage } from './pages/PaymentPage';
 import { PortSelectionPage } from './pages/PortSelectionPage';
+import { DocumentUploadPage } from './pages/DocumentUploadPage';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
            <Route path="/pay" element={<PaymentPage />} />
            <Route path="/port" element={<PortSelectionPage />} />
            <Route path="/demo" element={<DemoPage />} />
+           <Route path="/documents" element={<DocumentUploadPage />} />
            {/* Admin routes disabled for debug */}
         </Routes>
       </BrowserRouter>
