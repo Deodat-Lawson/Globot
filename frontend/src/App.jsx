@@ -18,7 +18,6 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { CommonHeader } from './components/CommonHeader';
 import { HeaderProvider } from './context/HeaderContext';
 
-import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { SignInPage } from './pages/SignInPage';
 import { AdminPage } from './pages/AdminPage';
 import { UsersHome } from './pages/UsersHome';
@@ -45,7 +44,6 @@ function App() {
   return (
     <ConfigProvider locale={zhCN}>
       <HeaderProvider>
-        <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
           <BrowserRouter>
             <CommonHeader />
             <RouteTracker />
@@ -103,7 +101,6 @@ function App() {
               />
             </Routes>
           </BrowserRouter>
-        </ClerkProvider>
       </HeaderProvider>
     </ConfigProvider>
   );
