@@ -1,65 +1,39 @@
+# Core Web Framework
 fastapi==0.115.6
 uvicorn[standard]==0.34.3
+starlette==0.41.3
+sse-starlette==3.0.3
 pydantic>=2.10.0
 pydantic-settings>=2.6.0
 anyio>=3.7.1,<5
 numpy>=1.26.0
-
-# Database
-psycopg2-binary>=2.9.0
-sqlalchemy==2.0.23
-alembic==1.13.1
-
-# Auth
-pyjwt
-cryptography
-
-# AI / ML
-langchain==1.2.0
-langchain-community==0.4.1
-langchain-classic
-langchain-huggingface>=0.1.0
-langchain-chroma>=0.1.4
-chromadb==1.1.1
-sentence-transformers==2.3.1
-
-# RAG Enhancement
-rank-bm25>=0.2.2
-
-# Agent orchestration
-crewai==1.7.2
-
-# LLM provider (CrewAI-compatible)
-openai==1.83.0
-
-# Tools
-python-dotenv==1.1.1
-requests>=2.32.5
-aiohttp==3.9.1
 python-multipart==0.0.21
 
-# PDF Processing
-pypdf==4.0.1
-python-docx==1.1.0
+# Database
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.11
+alembic==1.13.1
 
-# Ollama Client
-ollama==0.6.1
+# Data Validation
+pydantic==2.11.10
+pydantic-settings==2.10.1
+pydantic_core==2.33.2
 
-# RAG Enhancement (required by knowledge_base.py)
-rank-bm25>=0.2.2
-jieba>=0.42.1
-langchain-text-splitters>=0.0.1
+# AI/LLM
+crewai==1.7.2
+openai==1.83.0
 
+# Security
+python-jose[cryptography]==3.3.0
+python-dotenv==1.1.1
 
+# WebSockets
+websockets==16.0
 
-# Market data (Market Sentinel returns analysis)
-pandas>=2.1.0
-pandas-datareader>=0.10.0
+# HTTP Client (used by crewai/openai)
+httpx==0.28.1
+httpx-sse==0.4.3
+requests==2.32.5
 
-# Google AI (optional)
-google-generativeai>=0.3.0
-
-# Testing
-pytest
-pytest-asyncio
-httpx
+# Platform-specific
+uvloop==0.22.1; platform_system != "Windows"

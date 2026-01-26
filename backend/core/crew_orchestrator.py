@@ -13,8 +13,8 @@ import logging
 from typing import Dict, List, Optional
 
 import os
-from services.knowledge_base import get_knowledge_base
-from core.chatbot import DJIChatbot  # fallback helpers (product detection, etc.)
+# from services.knowledge_base import get_knowledge_base
+# from core.chatbot import DJIChatbot  # fallback helpers (product detection, etc.)
 from config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,6 @@ class CrewAIOrchestrator:
         self.Task = Task
         self.Crew = Crew
         self.LLM = LLM
-        self.kb = get_knowledge_base()
-        self.fallback_detector = DJIChatbot()  # reuse product detection logic
         self.settings = get_settings()
         self.llm = self._init_llm()
 

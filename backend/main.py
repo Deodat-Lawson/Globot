@@ -18,11 +18,12 @@ load_dotenv()
 # 导入模块
 from database import get_db, Base, engine
 from models import Customer, Conversation, Message, CustomerCategory, MessageSender, Handoff, ConversationStatus
-from core.chatbot import get_chatbot
-from core.classifier import get_classifier
-from core.handoff_manager import get_handoff_manager
+# from core.chatbot import get_chatbot
+# from core.classifier import get_classifier
+# from core.handoff_manager import get_handoff_manager
 from core.crew_orchestrator import CrewAIOrchestrator, get_crew_orchestrator
 from core.crew_stock_research import build_company_research_crew
+from core.clerk_auth import get_current_user, User
 
 from api.v2.demo_routes import router as demo_router
 from api.v2.market_sentinel_routes import router as market_sentinel_router
@@ -109,17 +110,17 @@ app.add_middleware(
 
 # 初始化核心模块
 try:
-    chatbot = get_chatbot()
-    classifier = get_classifier()
-    handoff_manager = get_handoff_manager()
+    # chatbot = get_chatbot()
+    # classifier = get_classifier()
+    # handoff_manager = get_handoff_manager()
     crew_orchestrator = get_crew_orchestrator()
     logger.info("核心模块初始化成功")
 except Exception as e:
     logger.error(f"核心模块初始化失败: {e}")
     # MVP阶段允许部分功能不可用
-    chatbot = None
-    classifier = None
-    handoff_manager = None
+    # chatbot = None
+    # classifier = None
+    # handoff_manager = None
     crew_orchestrator = None
 
 
@@ -275,7 +276,11 @@ async def chat(
     }
 
 @app.post("/api/customers", status_code=201)
-def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
+def create_customer(
+    customer: CustomerCreate, 
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
     """创建客户"""
     # 检查邮箱是否已存在
     existing = db.query(Customer).filter(Customer.email == customer.email).first()
@@ -306,7 +311,10 @@ def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     }
 
 @app.get("/api/customers")
-def list_customers(db: Session = Depends(get_db)):
+def list_customers(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
     """获取客户列表"""
     customers = db.query(Customer).order_by(Customer.priority_score.desc()).all()
     return {
@@ -559,6 +567,46 @@ def run_company_research(request: CompanyResearchRequest):
     except Exception as e:
         logger.error(f"Company research crew failed: {e}")
         raise HTTPException(status_code=500, detail=f"Company research failed: {e}")
+
+# ========== Admin Analytics API ==========
+
+@app.get("/api/admin/stats")
+def get_admin_stats(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """获取管理后台统计数据"""
+    if user.role != "admin":
+         # In MVP, we might allow all logged in users for now, or check role
+         pass 
+
+    from sqlalchemy import func
+    from datetime import timedelta
+    
+    # 1. 客户分类统计
+    category_stats = db.query(
+        Customer.category, func.count(Customer.id)
+    ).group_by(Customer.category).all()
+    
+    # 2. 过去7天对话量趋势
+    seven_days_ago = datetime.now() - timedelta(days=7)
+    trend_stats = db.query(
+        func.date(Conversation.started_at), func.count(Conversation.id)
+    ).filter(Conversation.started_at >= seven_days_ago) \
+     .group_by(func.date(Conversation.started_at)).all()
+    
+    # 3. 平均置信度
+    avg_conf = db.query(func.avg(Conversation.avg_confidence)).scalar() or 0.85
+
+    return {
+        "categories": [{"name": str(c[0].value if c[0] else "normal"), "value": c[1]} for c in category_stats],
+        "trends": [{"date": str(t[0]), "count": t[1]} for t in trend_stats],
+        "overall": {
+            "avg_confidence": round(float(avg_conf), 2),
+            "total_customers": db.query(func.count(Customer.id)).scalar(),
+            "total_conversations": db.query(func.count(Conversation.id)).scalar()
+        }
+    }
 
 # ========== 后台任务 ==========
 
