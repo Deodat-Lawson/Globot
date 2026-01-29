@@ -7,6 +7,10 @@ pydantic>=2.10.0
 pydantic-settings>=2.6.0
 anyio>=3.7.1,<5
 numpy>=1.26.0
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+anyio>=3.7.1,<5
+numpy>=1.26.0
 python-multipart==0.0.21
 
 # Database
@@ -19,14 +23,10 @@ pydantic==2.11.10
 pydantic-settings==2.10.1
 pydantic_core==2.33.2
 
-# AI/LLM
+# AI/LLMx
 crewai==1.7.2
 openai==1.83.0
-<<<<<<< HEAD
 langchain-google-genai
-=======
-
->>>>>>> main
 # Security
 python-jose[cryptography]==3.3.0
 python-dotenv==1.1.1

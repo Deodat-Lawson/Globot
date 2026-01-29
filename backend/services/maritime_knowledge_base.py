@@ -42,7 +42,8 @@ class MaritimeKnowledgeBase:
         "psc_requirements": "Port State Control requirements",
         "port_regulations": "Port-specific regulations",
         "regional_requirements": "Regional requirements (EU MRV, US CFR, etc.)",
-        "customs_documentation": "Customs and documentation requirements"
+        "customs_documentation": "Customs and documentation requirements",
+        "user_documents": "User-uploaded certificates and permits",
     }
 
     def __init__(self):
@@ -742,6 +743,179 @@ class MaritimeKnowledgeBase:
         """Check if port is subject to EU regulations"""
         eu_country_codes = {"NL", "DE", "BE", "FR", "ES", "IT", "PT", "GR", "PL", "SE", "FI", "DK", "IE", "EE", "LV", "LT", "HR", "SI", "CY", "MT", "RO", "BG"}
         return port_code[:2] in eu_country_codes
+
+    # =========================================================================
+    # User Document CRUD (ChromaDB-backed)
+    # =========================================================================
+
+    def _user_docs_collection(self):
+        """Get the user_documents Chroma collection"""
+        return self.collections["user_documents"]
+
+    def add_user_document(self, doc_id: str, text: str, metadata: Dict[str, Any]) -> str:
+        """
+        Add a user-uploaded document to ChromaDB.
+
+        Args:
+            doc_id: UUID string identifier
+            text: OCR-extracted text (used as the document content for embeddings)
+            metadata: Flat dict of metadata fields. No None values or nested objects.
+
+        Returns:
+            The doc_id that was stored
+        """
+        collection = self._user_docs_collection()
+        try:
+            # Handle empty text - use placeholder to avoid embedding API errors
+            content = text.strip() if text else ""
+            if not content:
+                content = f"[Document: {metadata.get('title', 'Untitled')}] No text content extracted."
+                logger.warning(f"Document {doc_id} has no text content, using placeholder")
+            
+            doc = Document(page_content=content, metadata=metadata)
+            collection.add_documents([doc], ids=[doc_id])
+            logger.info(f"Added user document {doc_id} to ChromaDB")
+            return doc_id
+        except Exception as e:
+            logger.error(f"Error adding user document {doc_id}: {e}")
+            raise
+
+    def get_user_document_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a single user document by its ID.
+
+        Returns:
+            Dict with 'id', 'text', and all metadata fields, or None if not found.
+        """
+        collection = self._user_docs_collection()
+        try:
+            result = collection._collection.get(ids=[doc_id], include=["documents", "metadatas"])
+            if not result["ids"]:
+                return None
+            return {
+                "id": result["ids"][0],
+                "text": result["documents"][0] if result["documents"] else "",
+                **(result["metadatas"][0] if result["metadatas"] else {}),
+            }
+        except Exception as e:
+            logger.error(f"Error fetching user document {doc_id}: {e}")
+            return None
+
+    def get_user_documents(
+        self,
+        where_filter: Dict[str, Any],
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get user documents matching a filter.
+
+        Args:
+            where_filter: ChromaDB where clause, e.g. {"vessel_id": 5}
+            limit: Max results
+
+        Returns:
+            List of dicts, each with 'id', 'text', and metadata fields.
+        """
+        collection = self._user_docs_collection()
+        try:
+            result = collection._collection.get(
+                where=where_filter,
+                limit=limit,
+                include=["documents", "metadatas"],
+            )
+            docs = []
+            for i, doc_id in enumerate(result["ids"]):
+                docs.append({
+                    "id": doc_id,
+                    "text": result["documents"][i] if result["documents"] else "",
+                    **(result["metadatas"][i] if result["metadatas"] else {}),
+                })
+            return docs
+        except Exception as e:
+            logger.error(f"Error fetching user documents with filter {where_filter}: {e}")
+            return []
+
+    def delete_user_document(self, doc_id: str) -> bool:
+        """Delete a user document by ID. Returns True on success."""
+        collection = self._user_docs_collection()
+        try:
+            collection._collection.delete(ids=[doc_id])
+            logger.info(f"Deleted user document {doc_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting user document {doc_id}: {e}")
+            return False
+
+    def update_user_document_metadata(
+        self, doc_id: str, metadata_updates: Dict[str, Any]
+    ) -> bool:
+        """
+        Update metadata fields on an existing user document.
+
+        Args:
+            doc_id: Document ID
+            metadata_updates: Dict of fields to update (merged with existing)
+
+        Returns:
+            True on success
+        """
+        collection = self._user_docs_collection()
+        try:
+            collection._collection.update(ids=[doc_id], metadatas=[metadata_updates])
+            logger.info(f"Updated metadata for user document {doc_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating user document {doc_id}: {e}")
+            return False
+
+    def count_user_documents(self, where_filter: Optional[Dict[str, Any]] = None) -> int:
+        """Count user documents matching an optional filter."""
+        collection = self._user_docs_collection()
+        try:
+            if where_filter:
+                result = collection._collection.get(where=where_filter, include=[])
+                return len(result["ids"])
+            else:
+                return collection._collection.count()
+        except Exception as e:
+            logger.error(f"Error counting user documents: {e}")
+            return 0
+
+    def search_user_documents(
+        self,
+        query_text: str,
+        where_filter: Optional[Dict[str, Any]] = None,
+        n_results: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """
+        Semantic search over user documents (OCR text).
+
+        Args:
+            query_text: Search query
+            where_filter: Optional ChromaDB where clause
+            n_results: Number of results
+
+        Returns:
+            List of dicts with 'id', 'text', metadata, and 'score'.
+        """
+        collection = self._user_docs_collection()
+        try:
+            kwargs: Dict[str, Any] = {"k": n_results}
+            if where_filter:
+                kwargs["filter"] = where_filter
+            results = collection.similarity_search_with_score(query_text, **kwargs)
+            docs = []
+            for doc, score in results:
+                doc_dict = {
+                    "text": doc.page_content,
+                    "score": score,
+                    **doc.metadata,
+                }
+                docs.append(doc_dict)
+            return docs
+        except Exception as e:
+            logger.error(f"Error searching user documents: {e}")
+            return []
 
 
 # Singleton instance

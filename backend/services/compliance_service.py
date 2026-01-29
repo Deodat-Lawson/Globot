@@ -11,7 +11,7 @@ from dataclasses import dataclass, field, asdict
 from sqlalchemy.orm import Session
 
 from models import (
-    Vessel, UserDocument, Port, ComplianceCheck, ComplianceStatus,
+    Vessel, Port, ComplianceCheck, ComplianceStatus,
     DocumentType, VesselType
 )
 from services.maritime_knowledge_base import get_maritime_knowledge_base, SearchResult
@@ -106,7 +106,7 @@ class ComplianceService:
     def __init__(self, db: Session):
         self.db = db
         self.kb = get_maritime_knowledge_base()
-        self.doc_service = DocumentService(db)
+        self.doc_service = DocumentService()
 
     def check_port_compliance(
         self,
@@ -154,10 +154,10 @@ class ComplianceService:
             except:
                 pass
 
-        # Check vessel documents against requirements
+        # Check vessel documents against requirements (pass string values)
         doc_matches = self.doc_service.find_matching_documents(
             vessel_id=vessel_id,
-            required_doc_types=list(all_required_types),
+            required_doc_types=[dt.value for dt in all_required_types],
             check_expiry=True
         )
 

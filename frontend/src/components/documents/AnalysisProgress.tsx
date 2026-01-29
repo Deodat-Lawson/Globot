@@ -172,4 +172,21 @@ export const DEFAULT_ANALYSIS_STEPS: AnalysisStep[] = [
   }
 ];
 
+export const MISSING_DOCS_ANALYSIS_STEPS: AnalysisStep[] = [
+  {
+    id: 'requirements',
+    agent: 'researcher',
+    status: 'pending',
+    title: 'Route Requirements Analyst',
+    description: 'Identifying all required documents for each port on the route'
+  },
+  {
+    id: 'gap_detection',
+    agent: 'gap_analyst',
+    status: 'pending',
+    title: 'Document Gap Detector',
+    description: 'Comparing vessel documents against requirements'
+  }
+];
+
 export default AnalysisProgress;

@@ -21,7 +21,7 @@ export interface Vessel {
 }
 
 export interface DocumentInfo {
-  id: number;
+  id: string;
   title: string;
   document_type: string;
   file_name: string | null;
@@ -91,11 +91,78 @@ export interface UploadDocumentParams {
 export interface AnalyzeDocumentsParams {
   vessel_id: number;
   port_codes: string[];
-  document_ids?: number[];
+  document_ids?: string[];
+}
+
+// Route types
+export interface VesselRoute {
+  id: number;
+  vessel_id: number;
+  route_name: string;
+  port_codes: string[];
+  origin_port: string | null;
+  destination_port: string | null;
+  departure_date: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CreateRouteParams {
+  route_name: string;
+  port_codes: string[];
+  departure_date?: string;
+  set_active?: boolean;
+}
+
+export interface DetectMissingParams {
+  vessel_id: number;
+  route_id?: number;
+}
+
+export interface MissingDocsResponse {
+  success: boolean;
+  overall_status: 'COMPLIANT' | 'PARTIAL' | 'NON_COMPLIANT' | 'ERROR' | 'PENDING_REVIEW';
+  compliance_score: number;
+  vessel_info: {
+    name: string;
+    imo_number: string;
+    vessel_type: string;
+    flag_state: string;
+    gross_tonnage: number;
+  };
+  route_ports: string[];
+  route_name: string;
+  missing_documents: MissingDocument[];
+  expired_documents: DocumentSummary[];
+  expiring_soon_documents: DocumentSummary[];
+  valid_documents: DocumentSummary[];
+  recommendations: Recommendation[];
+  agent_reasoning: string | null;
+  total_documents_on_file: number;
+}
+
+// Provisioning types
+export interface ProvisionParams {
+  clerk_id: string;
+  email: string;
+  name?: string;
+}
+
+export interface ProvisionResponse {
+  customer_id: number;
+  vessel_id: number | null;
+  vessel_name: string | null;
+  is_new: boolean;
 }
 
 // Document API service
 export const documentAPI = {
+  // Auto-provision customer (and discover default vessel) for a Clerk user
+  provisionUser: async (params: ProvisionParams): Promise<ProvisionResponse> => {
+    const response = await api.post('/v2/maritime/me/provision', params);
+    return response.data;
+  },
+
   // Upload a document with OCR processing
   uploadDocument: async (params: UploadDocumentParams): Promise<DocumentInfo> => {
     const formData = new FormData();
@@ -140,13 +207,13 @@ export const documentAPI = {
   },
 
   // Get single document with full details
-  getDocument: async (documentId: number): Promise<DocumentInfo & { extracted_text: string; extracted_fields: Record<string, any> }> => {
+  getDocument: async (documentId: string): Promise<DocumentInfo & { extracted_text: string; extracted_fields: Record<string, any> }> => {
     const response = await api.get(`/v2/maritime/documents/${documentId}`);
     return response.data;
   },
 
   // Delete a document
-  deleteDocument: async (documentId: number): Promise<{ status: string; document_id: number }> => {
+  deleteDocument: async (documentId: string): Promise<{ status: string; document_id: string }> => {
     const response = await api.delete(`/v2/maritime/documents/${documentId}`);
     return response.data;
   },
@@ -195,6 +262,52 @@ export const documentAPI = {
     return response.data;
   },
 
+  // ========== Route Management ==========
+
+  // Get all routes for a vessel
+  getVesselRoutes: async (vesselId: number): Promise<VesselRoute[]> => {
+    const response = await api.get(`/v2/maritime/vessels/${vesselId}/routes`);
+    return response.data;
+  },
+
+  // Get active route for a vessel
+  getActiveRoute: async (vesselId: number): Promise<VesselRoute | null> => {
+    try {
+      const response = await api.get(`/v2/maritime/vessels/${vesselId}/routes/active`);
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
+  // Create a new route for a vessel
+  createRoute: async (vesselId: number, params: CreateRouteParams): Promise<VesselRoute> => {
+    const response = await api.post(`/v2/maritime/vessels/${vesselId}/routes`, params);
+    return response.data;
+  },
+
+  // Activate a route
+  activateRoute: async (vesselId: number, routeId: number): Promise<VesselRoute> => {
+    const response = await api.put(`/v2/maritime/vessels/${vesselId}/routes/${routeId}/activate`);
+    return response.data;
+  },
+
+  // Delete a route
+  deleteRoute: async (vesselId: number, routeId: number): Promise<{ status: string; route_id: number }> => {
+    const response = await api.delete(`/v2/maritime/vessels/${vesselId}/routes/${routeId}`);
+    return response.data;
+  },
+
+  // ========== Missing Documents Detection ==========
+
+  // Detect missing documents for a vessel's route
+  detectMissingDocuments: async (params: DetectMissingParams): Promise<MissingDocsResponse> => {
+    const response = await api.post('/v2/maritime/documents/detect-missing', params);
+    return response.data;
+  },
+
+  // ========== Health & Utility ==========
+
   // Health check
   healthCheck: async (): Promise<{
     status: string;
@@ -204,6 +317,7 @@ export const documentAPI = {
     };
     crewai_compliance_available: boolean;
     crewai_document_analysis_available: boolean;
+    crewai_missing_docs_available: boolean;
     timestamp: string;
   }> => {
     const response = await api.get('/v2/maritime/health');

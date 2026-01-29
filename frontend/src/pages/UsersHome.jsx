@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, SignOutButton } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Home, 
-  Zap, 
-  Clock, 
-  Shield, 
-  ArrowLeft, 
-  Database, 
+import {
+  Home,
+  Zap,
+  Clock,
+  Shield,
+  ArrowLeft,
+  Database,
   CreditCard,
   History,
   TrendingUp,
@@ -25,8 +25,10 @@ import {
   MapPin,
   Calendar,
   Layers,
-  Info
+  Info,
+  X
 } from 'lucide-react';
+import { documentAPI } from '../services/documentApi';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function UsersHome() {
@@ -38,7 +40,36 @@ export function UsersHome() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  
+  const [uploadError, setUploadError] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
+
+  // Customer/vessel identity from backend
+  const [customerId, setCustomerId] = useState(null);
+  const [vesselId, setVesselId] = useState(null);
+
+  // Provision customer + vessel on mount once Clerk user is loaded
+  useEffect(() => {
+    if (!user) return;
+    const provision = async () => {
+      try {
+        const res = await documentAPI.provisionUser({
+          clerk_id: user.id,
+          email: user.primaryEmailAddress?.emailAddress || '',
+          name: user.fullName || undefined,
+        });
+        setCustomerId(res.customer_id);
+        if (res.vessel_id) setVesselId(res.vessel_id);
+      } catch (err) {
+        console.error('Provisioning failed:', err);
+        // Fallback to default IDs if provisioning fails
+        setCustomerId(1);
+        setVesselId(1);
+      }
+    };
+    provision();
+  }, [user]);
+
   // User metrics data
   const [metrics, setMetrics] = useState({
     totalTokens: 5000000,
@@ -82,48 +113,89 @@ export function UsersHome() {
     setShipData(prev => ({ ...prev, [field]: value }));
   };
 
-  const simulateFileUpload = async (files) => {
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      handleFileUpload(file);
+    }
+  };
+
+  const handleDropZoneClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      handleFileUpload(file);
+    }
+  };
+
+  const handleFileUpload = async (file) => {
     setIsParsing(true);
     setUploadProgress(0);
-    
-    // Simulate upload progress
+    setUploadError(null);
+
+    // Progress simulation for UX (real upload happens in parallel)
     const interval = setInterval(() => {
       setUploadProgress(prev => {
-        if (prev >= 100) {
+        if (prev >= 90) {
           clearInterval(interval);
-          return 100;
+          return 90;
         }
         return prev + 10;
       });
-    }, 200);
+    }, 300);
 
-    // Wait for "Parsing"
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Auto-fill mock data extracted from the document
-    setShipData({
-      vesselName: 'COSCO SHIPPING NEBULA',
-      callSign: 'VRAB2',
-      imoNumber: '9876543',
-      mmsiCode: '477123456',
-      flag: 'Hong Kong, China',
-      vesselType: 'Ultra Large Container Vessel (ULCV)',
-      originalVoyage: '045W (via Suez)',
-      newVoyage: '045W (via Good Hope)',
-      portOfLoading: 'Shanghai Yangshan (CNYSN)',
-      portOfDischarge: 'Rotterdam Gateway (NLRTM)',
-      etaOriginal: '2026-02-22',
-      etaNew: '2026-03-08',
-      cargoName: 'Smartwatch Components',
-      hsCode: '8517.7900',
-      dgClass: 'Class 9, UN 3481',
-      weight: '12,500 KGS',
-      volume: '45 CBM'
-    });
+    try {
+      if (!customerId) {
+        throw new Error('User account not ready. Please wait a moment and try again.');
+      }
 
-    setIsParsing(false);
-    setShowUploadModal(false);
-    setActiveTab('vessel');
+      // Step 1: Upload document to backend with OCR processing
+      const uploadResult = await documentAPI.uploadDocument({
+        customer_id: customerId,
+        vessel_id: vesselId || 1,
+        document_type: 'other',
+        title: file.name,
+        file: file,
+      });
+
+      setUploadProgress(95);
+
+      // Step 2: Fetch full document details including extracted_fields from OCR
+      const docDetails = await documentAPI.getDocument(uploadResult.id);
+      const fields = docDetails.extracted_fields || {};
+
+      clearInterval(interval);
+      setUploadProgress(100);
+
+      // Step 3: Map OCR-extracted fields to vessel form
+      setShipData(prev => ({
+        ...prev,
+        vesselName: fields.vessel_name || prev.vesselName,
+        imoNumber: fields.imo_number || prev.imoNumber,
+        flag: fields.flag_state || prev.flag,
+        vesselType: fields.vessel_type || prev.vesselType,
+      }));
+
+      // Short delay to show 100% before closing
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setIsParsing(false);
+      setShowUploadModal(false);
+      setSelectedFile(null);
+      setActiveTab('vessel');
+    } catch (err) {
+      clearInterval(interval);
+      console.error('Upload failed:', err);
+      setUploadError(err.response?.data?.detail || err.message || 'Upload failed. Please try again.');
+      setIsParsing(false);
+      setUploadProgress(0);
+    }
   };
 
   return (
@@ -429,16 +501,33 @@ export function UsersHome() {
                 </div>
 
                 {!isParsing ? (
-                  <div 
-                    onClick={() => simulateFileUpload()}
-                    className="border-2 border-dashed border-white/10 rounded-3xl p-12 text-center hover:border-blue-500/40 hover:bg-blue-500/5 transition-all cursor-pointer group"
-                  >
-                     <Plus className="w-10 h-10 text-white/20 group-hover:text-blue-500 mx-auto mb-4 transition-all group-hover:scale-110" />
-                     <p className="font-bold text-lg mb-1">Drag and Drop Files Here</p>
-                     <p className="text-sm text-white/30">Support PDF, TXT, JPG (Max 50MB per file)</p>
-                     <div className="mt-8 flex justify-center gap-2">
-                        <FileIcon /> <FileIcon /> <FileIcon />
-                     </div>
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <div
+                      onClick={handleDropZoneClick}
+                      onDrop={handleDrop}
+                      onDragOver={(e) => e.preventDefault()}
+                      className="border-2 border-dashed border-white/10 rounded-3xl p-12 text-center hover:border-blue-500/40 hover:bg-blue-500/5 transition-all cursor-pointer group"
+                    >
+                       <Plus className="w-10 h-10 text-white/20 group-hover:text-blue-500 mx-auto mb-4 transition-all group-hover:scale-110" />
+                       <p className="font-bold text-lg mb-1">Drag and Drop Files Here</p>
+                       <p className="text-sm text-white/30">Supports PDF, PNG, JPG (Max 50MB per file)</p>
+                       <div className="mt-8 flex justify-center gap-2">
+                          <FileIcon /> <FileIcon /> <FileIcon />
+                       </div>
+                    </div>
+                    {uploadError && (
+                      <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        {uploadError}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="py-12 px-6">

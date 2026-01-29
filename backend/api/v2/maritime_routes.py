@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import (
-    Vessel, UserDocument, Port, VesselType, DocumentType
+    Vessel, Port, VesselType, DocumentType, VesselRoute, Customer
 )
 from services.document_service import DocumentService
 from services.compliance_service import ComplianceService
@@ -21,6 +21,7 @@ from services.maritime_knowledge_base import get_maritime_knowledge_base
 from services.compliance_report_generator import get_compliance_report_generator
 from core.crew_maritime_compliance import get_compliance_orchestrator
 from core.crew_document_agents import get_document_analysis_orchestrator
+from core.crew_missing_docs_workflow import get_missing_docs_orchestrator
 from models.compliance_report import (
     ComplianceReport,
     ComplianceStatus,
@@ -75,21 +76,18 @@ class VesselResponse(BaseModel):
 
 class DocumentResponse(BaseModel):
     """Response model for document"""
-    id: int
+    id: str
     title: str
     document_type: str
     file_name: Optional[str]
     file_size: Optional[int]
     ocr_confidence: Optional[float]
     issuing_authority: Optional[str]
-    issue_date: Optional[datetime]
-    expiry_date: Optional[datetime]
+    issue_date: Optional[str]
+    expiry_date: Optional[str]
     document_number: Optional[str]
     is_validated: bool
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
+    created_at: str
 
 
 class RouteComplianceRequest(BaseModel):
@@ -147,7 +145,7 @@ class DocumentAnalysisRequest(BaseModel):
     """Request model for document analysis with CrewAI agents"""
     vessel_id: int
     port_codes: List[str] = Field(..., min_length=1, description="List of UN/LOCODE port codes")
-    document_ids: Optional[List[int]] = Field(None, description="Specific document IDs to analyze (default: all vessel docs)")
+    document_ids: Optional[List[str]] = Field(None, description="Specific document IDs to analyze (default: all vessel docs)")
 
 
 class DocumentSummary(BaseModel):
@@ -187,6 +185,116 @@ class DocumentAnalysisResponse(BaseModel):
     agent_reasoning: Optional[str] = None
     vessel_info: dict
     route_ports: List[str]
+
+
+# ========== Route Management Models ==========
+
+class VesselRouteCreate(BaseModel):
+    """Request model for creating a vessel route"""
+    route_name: str = Field(..., min_length=1, max_length=300)
+    port_codes: List[str] = Field(..., min_length=1, description="List of UN/LOCODE port codes in route order")
+    departure_date: Optional[str] = Field(None, description="ISO date format")
+    set_active: bool = Field(default=True, description="Set as the active route for this vessel")
+
+
+class VesselRouteResponse(BaseModel):
+    """Response model for vessel route"""
+    id: int
+    vessel_id: int
+    route_name: str
+    port_codes: List[str]
+    origin_port: Optional[str]
+    destination_port: Optional[str]
+    departure_date: Optional[datetime]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MissingDocsRequest(BaseModel):
+    """Request model for missing documents detection"""
+    vessel_id: int
+    route_id: Optional[int] = Field(None, description="Specific route ID. If omitted, uses active route.")
+
+
+class MissingDocsResponse(BaseModel):
+    """Response model for missing documents detection"""
+    success: bool
+    overall_status: str  # COMPLIANT, PARTIAL, NON_COMPLIANT, ERROR
+    compliance_score: int = Field(ge=0, le=100)
+    vessel_info: dict
+    route_ports: List[str]
+    route_name: str
+    missing_documents: List[MissingDocument]
+    expired_documents: List[DocumentSummary]
+    expiring_soon_documents: List[DocumentSummary]
+    valid_documents: List[DocumentSummary]
+    recommendations: List[Recommendation]
+    agent_reasoning: Optional[str] = None
+    total_documents_on_file: int
+
+
+# ========== User Provisioning ==========
+
+class ProvisionRequest(BaseModel):
+    """Request model for auto-provisioning a user"""
+    clerk_id: str = Field(..., min_length=1)
+    email: str = Field(..., min_length=3)
+    name: Optional[str] = None
+
+
+class ProvisionResponse(BaseModel):
+    """Response model for provisioning result"""
+    customer_id: int
+    vessel_id: Optional[int] = None
+    vessel_name: Optional[str] = None
+    is_new: bool  # Whether a new customer was created
+
+
+@router.post("/me/provision")
+async def provision_user(
+    req: ProvisionRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Auto-provision a Customer (and optionally a default Vessel) for the
+    currently authenticated Clerk user.  If the customer already exists
+    (by clerk_id or email), return the existing record.
+    """
+    # 1. Try to find by clerk_id first
+    customer = db.query(Customer).filter(Customer.clerk_id == req.clerk_id).first()
+    is_new = False
+
+    if not customer:
+        # 2. Try to find by email (may exist from before clerk_id was added)
+        customer = db.query(Customer).filter(Customer.email == req.email).first()
+        if customer:
+            # Backfill clerk_id
+            customer.clerk_id = req.clerk_id
+            db.commit()
+        else:
+            # 3. Create new customer
+            customer = Customer(
+                clerk_id=req.clerk_id,
+                name=req.name or req.email.split("@")[0],
+                email=req.email,
+            )
+            db.add(customer)
+            db.commit()
+            db.refresh(customer)
+            is_new = True
+
+    # Check if customer has at least one vessel
+    vessel = db.query(Vessel).filter(Vessel.customer_id == customer.id).first()
+
+    return ProvisionResponse(
+        customer_id=customer.id,
+        vessel_id=vessel.id if vessel else None,
+        vessel_name=vessel.name if vessel else None,
+        is_new=is_new,
+    )
 
 
 # ========== Vessel Management Endpoints ==========
@@ -245,10 +353,11 @@ async def list_vessels(
 ):
     """List all vessels for a customer"""
     vessels = db.query(Vessel).filter(Vessel.customer_id == customer_id).all()
+    doc_service = DocumentService()
 
     results = []
     for v in vessels:
-        doc_count = db.query(UserDocument).filter(UserDocument.vessel_id == v.id).count()
+        doc_count = len(doc_service.get_vessel_documents(v.id))
         results.append(VesselResponse(
             id=v.id,
             name=v.name,
@@ -275,7 +384,8 @@ async def get_vessel(vessel_id: int, db: Session = Depends(get_db)):
     if not vessel:
         raise HTTPException(status_code=404, detail="Vessel not found")
 
-    doc_count = db.query(UserDocument).filter(UserDocument.vessel_id == vessel_id).count()
+    doc_service = DocumentService()
+    doc_count = len(doc_service.get_vessel_documents(vessel_id))
 
     return VesselResponse(
         id=vessel.id,
@@ -292,6 +402,178 @@ async def get_vessel(vessel_id: int, db: Session = Depends(get_db)):
         document_count=doc_count,
         created_at=vessel.created_at,
     )
+
+
+# ========== Vessel Route Management Endpoints ==========
+
+@router.post("/vessels/{vessel_id}/routes", response_model=VesselRouteResponse, status_code=201)
+async def create_vessel_route(
+    vessel_id: int,
+    route: VesselRouteCreate,
+    db: Session = Depends(get_db)
+):
+    """Create a new route for a vessel"""
+    vessel = db.query(Vessel).filter(Vessel.id == vessel_id).first()
+    if not vessel:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+
+    # Parse departure date
+    parsed_departure = None
+    if route.departure_date:
+        try:
+            parsed_departure = datetime.fromisoformat(route.departure_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid departure_date format. Use ISO format.")
+
+    port_codes = [p.strip().upper() for p in route.port_codes if p.strip()]
+
+    # If set_active, deactivate existing active routes for this vessel
+    if route.set_active:
+        db.query(VesselRoute).filter(
+            VesselRoute.vessel_id == vessel_id,
+            VesselRoute.is_active == True
+        ).update({"is_active": False})
+
+    new_route = VesselRoute(
+        vessel_id=vessel_id,
+        route_name=route.route_name,
+        port_codes=json.dumps(port_codes),
+        origin_port=port_codes[0] if port_codes else None,
+        destination_port=port_codes[-1] if port_codes else None,
+        departure_date=parsed_departure,
+        is_active=route.set_active,
+    )
+
+    db.add(new_route)
+    db.commit()
+    db.refresh(new_route)
+
+    return VesselRouteResponse(
+        id=new_route.id,
+        vessel_id=new_route.vessel_id,
+        route_name=new_route.route_name,
+        port_codes=port_codes,
+        origin_port=new_route.origin_port,
+        destination_port=new_route.destination_port,
+        departure_date=new_route.departure_date,
+        is_active=new_route.is_active,
+        created_at=new_route.created_at,
+    )
+
+
+@router.get("/vessels/{vessel_id}/routes", response_model=List[VesselRouteResponse])
+async def list_vessel_routes(
+    vessel_id: int,
+    db: Session = Depends(get_db)
+):
+    """List all routes for a vessel"""
+    vessel = db.query(Vessel).filter(Vessel.id == vessel_id).first()
+    if not vessel:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+
+    routes = db.query(VesselRoute).filter(VesselRoute.vessel_id == vessel_id).order_by(VesselRoute.created_at.desc()).all()
+
+    return [
+        VesselRouteResponse(
+            id=r.id,
+            vessel_id=r.vessel_id,
+            route_name=r.route_name,
+            port_codes=json.loads(r.port_codes) if r.port_codes else [],
+            origin_port=r.origin_port,
+            destination_port=r.destination_port,
+            departure_date=r.departure_date,
+            is_active=r.is_active,
+            created_at=r.created_at,
+        )
+        for r in routes
+    ]
+
+
+@router.get("/vessels/{vessel_id}/routes/active", response_model=VesselRouteResponse)
+async def get_active_route(
+    vessel_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get the active route for a vessel"""
+    route = db.query(VesselRoute).filter(
+        VesselRoute.vessel_id == vessel_id,
+        VesselRoute.is_active == True
+    ).first()
+
+    if not route:
+        raise HTTPException(status_code=404, detail="No active route found for this vessel")
+
+    return VesselRouteResponse(
+        id=route.id,
+        vessel_id=route.vessel_id,
+        route_name=route.route_name,
+        port_codes=json.loads(route.port_codes) if route.port_codes else [],
+        origin_port=route.origin_port,
+        destination_port=route.destination_port,
+        departure_date=route.departure_date,
+        is_active=route.is_active,
+        created_at=route.created_at,
+    )
+
+
+@router.put("/vessels/{vessel_id}/routes/{route_id}/activate", response_model=VesselRouteResponse)
+async def activate_vessel_route(
+    vessel_id: int,
+    route_id: int,
+    db: Session = Depends(get_db)
+):
+    """Set a route as the active route for a vessel"""
+    route = db.query(VesselRoute).filter(
+        VesselRoute.id == route_id,
+        VesselRoute.vessel_id == vessel_id
+    ).first()
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    # Deactivate all other routes for this vessel
+    db.query(VesselRoute).filter(
+        VesselRoute.vessel_id == vessel_id,
+        VesselRoute.is_active == True
+    ).update({"is_active": False})
+
+    # Activate the selected route
+    route.is_active = True
+    db.commit()
+    db.refresh(route)
+
+    return VesselRouteResponse(
+        id=route.id,
+        vessel_id=route.vessel_id,
+        route_name=route.route_name,
+        port_codes=json.loads(route.port_codes) if route.port_codes else [],
+        origin_port=route.origin_port,
+        destination_port=route.destination_port,
+        departure_date=route.departure_date,
+        is_active=route.is_active,
+        created_at=route.created_at,
+    )
+
+
+@router.delete("/vessels/{vessel_id}/routes/{route_id}")
+async def delete_vessel_route(
+    vessel_id: int,
+    route_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a vessel route"""
+    route = db.query(VesselRoute).filter(
+        VesselRoute.id == route_id,
+        VesselRoute.vessel_id == vessel_id
+    ).first()
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    db.delete(route)
+    db.commit()
+
+    return {"status": "deleted", "route_id": route_id}
 
 
 # ========== Document Upload Endpoints ==========
@@ -335,14 +617,14 @@ async def upload_document(
             raise HTTPException(status_code=400, detail="Invalid expiry_date format. Use ISO format.")
 
     # Upload document
-    doc_service = DocumentService(db)
+    doc_service = DocumentService()
 
     try:
         document = await doc_service.upload_document(
             customer_id=customer_id,
             vessel_id=vessel_id,
             file=file,
-            document_type=document_type,
+            document_type=document_type.value,
             title=title,
             issue_date=parsed_issue_date,
             expiry_date=parsed_expiry_date,
@@ -353,83 +635,90 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=str(e))
 
     return DocumentResponse(
-        id=document.id,
-        title=document.title,
-        document_type=document.document_type.value,
-        file_name=document.file_name,
-        file_size=document.file_size,
-        ocr_confidence=document.ocr_confidence,
-        issuing_authority=document.issuing_authority,
-        issue_date=document.issue_date,
-        expiry_date=document.expiry_date,
-        document_number=document.document_number,
-        is_validated=document.is_validated,
-        created_at=document.created_at,
+        id=document["id"],
+        title=document["title"],
+        document_type=document["document_type"],
+        file_name=document.get("file_name"),
+        file_size=document.get("file_size"),
+        ocr_confidence=document.get("ocr_confidence"),
+        issuing_authority=document.get("issuing_authority"),
+        issue_date=document.get("issue_date"),
+        expiry_date=document.get("expiry_date"),
+        document_number=document.get("document_number"),
+        is_validated=document.get("is_validated", False),
+        created_at=document.get("created_at", ""),
     )
 
 
 @router.get("/documents/vessel/{vessel_id}", response_model=List[DocumentResponse])
 async def get_vessel_documents(
     vessel_id: int,
-    document_type: Optional[DocumentType] = None,
-    db: Session = Depends(get_db)
+    document_type: Optional[str] = None,
 ):
     """Get all documents for a vessel"""
-    doc_service = DocumentService(db)
+    doc_service = DocumentService()
     documents = doc_service.get_vessel_documents(vessel_id, document_type)
 
     return [
         DocumentResponse(
-            id=d.id,
-            title=d.title,
-            document_type=d.document_type.value,
-            file_name=d.file_name,
-            file_size=d.file_size,
-            ocr_confidence=d.ocr_confidence,
-            issuing_authority=d.issuing_authority,
-            issue_date=d.issue_date,
-            expiry_date=d.expiry_date,
-            document_number=d.document_number,
-            is_validated=d.is_validated,
-            created_at=d.created_at,
+            id=d["id"],
+            title=d["title"],
+            document_type=d["document_type"],
+            file_name=d.get("file_name"),
+            file_size=d.get("file_size"),
+            ocr_confidence=d.get("ocr_confidence"),
+            issuing_authority=d.get("issuing_authority"),
+            issue_date=d.get("issue_date"),
+            expiry_date=d.get("expiry_date"),
+            document_number=d.get("document_number"),
+            is_validated=d.get("is_validated", False),
+            created_at=d.get("created_at", ""),
         )
         for d in documents
     ]
 
 
 @router.get("/documents/{document_id}")
-async def get_document(document_id: int, db: Session = Depends(get_db)):
+async def get_document(document_id: str):
     """Get document details including extracted text"""
-    doc_service = DocumentService(db)
+    doc_service = DocumentService()
     document = doc_service.get_document(document_id)
 
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    # Parse extracted_fields from JSON string
+    extracted_fields = document.get("extracted_fields", "{}")
+    if isinstance(extracted_fields, str):
+        try:
+            extracted_fields = json.loads(extracted_fields)
+        except (json.JSONDecodeError, TypeError):
+            extracted_fields = {}
+
     return {
-        "id": document.id,
-        "title": document.title,
-        "document_type": document.document_type.value,
-        "file_name": document.file_name,
-        "file_size": document.file_size,
-        "mime_type": document.mime_type,
-        "ocr_confidence": document.ocr_confidence,
-        "extracted_text": document.extracted_text,
-        "extracted_fields": json.loads(document.extracted_fields) if document.extracted_fields else {},
-        "issuing_authority": document.issuing_authority,
-        "issue_date": document.issue_date.isoformat() if document.issue_date else None,
-        "expiry_date": document.expiry_date.isoformat() if document.expiry_date else None,
-        "document_number": document.document_number,
-        "is_validated": document.is_validated,
-        "validation_notes": document.validation_notes,
-        "created_at": document.created_at.isoformat(),
+        "id": document["id"],
+        "title": document["title"],
+        "document_type": document["document_type"],
+        "file_name": document.get("file_name"),
+        "file_size": document.get("file_size"),
+        "mime_type": document.get("mime_type"),
+        "ocr_confidence": document.get("ocr_confidence"),
+        "extracted_text": document.get("extracted_text", ""),
+        "extracted_fields": extracted_fields,
+        "issuing_authority": document.get("issuing_authority"),
+        "issue_date": document.get("issue_date") or None,
+        "expiry_date": document.get("expiry_date") or None,
+        "document_number": document.get("document_number"),
+        "is_validated": document.get("is_validated", False),
+        "validation_notes": document.get("validation_notes"),
+        "created_at": document.get("created_at", ""),
     }
 
 
 @router.delete("/documents/{document_id}")
-async def delete_document(document_id: int, db: Session = Depends(get_db)):
+async def delete_document(document_id: str):
     """Delete a document"""
-    doc_service = DocumentService(db)
+    doc_service = DocumentService()
     success = doc_service.delete_document(document_id)
 
     if not success:
@@ -478,14 +767,14 @@ async def analyze_documents_with_agents(
     }
 
     # Get documents
-    doc_service = DocumentService(db)
+    doc_service = DocumentService()
 
     if request.document_ids:
         # Get specific documents
         documents = []
         for doc_id in request.document_ids:
             doc = doc_service.get_document(doc_id)
-            if doc and doc.vessel_id == request.vessel_id:
+            if doc and doc.get("vessel_id") == request.vessel_id:
                 documents.append(doc)
     else:
         # Get all vessel documents
@@ -500,12 +789,12 @@ async def analyze_documents_with_agents(
     # Prepare document texts for analysis
     document_texts = [
         {
-            "id": str(d.id),
-            "filename": d.file_name or f"document_{d.id}",
-            "file_type": d.mime_type or "application/pdf",
-            "ocr_text": d.extracted_text or "",
-            "document_type": d.document_type.value if d.document_type else "unknown",
-            "expiry_date": d.expiry_date.strftime("%Y-%m-%d") if d.expiry_date else None,
+            "id": str(d["id"]),
+            "filename": d.get("file_name") or f"document_{d['id']}",
+            "file_type": d.get("mime_type") or "application/pdf",
+            "ocr_text": d.get("extracted_text") or "",
+            "document_type": d.get("document_type", "unknown"),
+            "expiry_date": d.get("expiry_date") or None,
         }
         for d in documents
     ]
@@ -605,6 +894,185 @@ async def analyze_documents_with_agents(
     )
 
 
+# ========== Missing Documents Detection Endpoint ==========
+
+@router.post("/documents/detect-missing", response_model=MissingDocsResponse)
+async def detect_missing_documents(
+    request: MissingDocsRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Detect missing documents for a vessel's route using a dedicated agentic workflow.
+
+    This is SEPARATE from /documents/analyze:
+    - /documents/analyze: Analyzes raw uploaded document content (OCR text) with 3-agent crew
+    - /documents/detect-missing: Checks ALL existing DB records against route requirements with 2-agent crew
+
+    Steps:
+    1. Load vessel info
+    2. Load active route (or specified route_id)
+    3. Load all UserDocuments for the vessel (structured data, not raw OCR)
+    4. Run the missing docs agentic workflow
+    5. Return structured gap analysis
+    """
+    # Validate vessel exists
+    vessel = db.query(Vessel).filter(Vessel.id == request.vessel_id).first()
+    if not vessel:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+
+    # Get route
+    if request.route_id:
+        route = db.query(VesselRoute).filter(
+            VesselRoute.id == request.route_id,
+            VesselRoute.vessel_id == request.vessel_id
+        ).first()
+    else:
+        route = db.query(VesselRoute).filter(
+            VesselRoute.vessel_id == request.vessel_id,
+            VesselRoute.is_active == True
+        ).first()
+
+    if not route:
+        raise HTTPException(
+            status_code=404,
+            detail="No active route found for this vessel. Please create a route first."
+        )
+
+    port_codes = json.loads(route.port_codes) if route.port_codes else []
+
+    # Prepare vessel info
+    vessel_info = {
+        "name": vessel.name,
+        "imo_number": vessel.imo_number,
+        "vessel_type": vessel.vessel_type.value if vessel.vessel_type else "container",
+        "flag_state": vessel.flag_state,
+        "gross_tonnage": vessel.gross_tonnage,
+    }
+
+    # Get ALL vessel documents (structured data, NOT raw OCR text)
+    doc_service = DocumentService()
+    documents = doc_service.get_vessel_documents(request.vessel_id)
+
+    existing_docs = []
+    for d in documents:
+        expiry_str = d.get("expiry_date") or ""
+        is_expired = False
+        if expiry_str:
+            try:
+                is_expired = datetime.fromisoformat(expiry_str) < datetime.now()
+            except (ValueError, TypeError):
+                pass
+        existing_docs.append({
+            "document_type": d.get("document_type", "other"),
+            "expiry_date": expiry_str or None,
+            "is_expired": is_expired,
+            "is_validated": d.get("is_validated", False),
+            "document_number": d.get("document_number"),
+            "issuing_authority": d.get("issuing_authority"),
+            "title": d.get("title", ""),
+        })
+
+    # Get orchestrator
+    orchestrator = get_missing_docs_orchestrator()
+
+    if not orchestrator.is_available:
+        raise HTTPException(
+            status_code=503,
+            detail="Missing documents detection service not available. Check CrewAI configuration."
+        )
+
+    # Run the agentic workflow
+    result = await orchestrator.detect_missing_documents(
+        vessel_info=vessel_info,
+        route_ports=port_codes,
+        existing_documents=existing_docs
+    )
+
+    if not result.get("success"):
+        return MissingDocsResponse(
+            success=False,
+            overall_status="ERROR",
+            compliance_score=0,
+            vessel_info=vessel_info,
+            route_ports=port_codes,
+            route_name=route.route_name,
+            missing_documents=[],
+            expired_documents=[],
+            expiring_soon_documents=[],
+            valid_documents=[],
+            recommendations=[],
+            agent_reasoning=result.get("error", "Unknown error"),
+            total_documents_on_file=len(documents),
+        )
+
+    # Parse the result
+    parsed = result.get("parsed_result") or {}
+
+    # Extract data from parsed result
+    valid_docs = []
+    expiring_docs = []
+    expired_docs = []
+    missing_docs = []
+    recommendations = []
+    compliance_score = parsed.get("compliance_score", 0)
+    overall_status = parsed.get("overall_status", "PENDING_REVIEW")
+
+    for doc in parsed.get("valid_documents", []):
+        valid_docs.append(DocumentSummary(
+            document_type=doc.get("document_type", "unknown"),
+            expiry_date=doc.get("expiry_date"),
+            status="valid",
+            days_until_expiry=doc.get("days_until_expiry")
+        ))
+
+    for doc in parsed.get("expiring_soon", parsed.get("expiring_soon_documents", [])):
+        expiring_docs.append(DocumentSummary(
+            document_type=doc.get("document_type", "unknown"),
+            expiry_date=doc.get("expiry_date"),
+            status="expiring_soon",
+            days_until_expiry=doc.get("days_until_expiry")
+        ))
+
+    for doc in parsed.get("expired_documents", []):
+        expired_docs.append(DocumentSummary(
+            document_type=doc.get("document_type", "unknown"),
+            expiry_date=doc.get("expiry_date"),
+            status="expired",
+            days_until_expiry=doc.get("days_until_expiry")
+        ))
+
+    for doc in parsed.get("missing_documents", []):
+        missing_docs.append(MissingDocument(
+            document_type=doc.get("document_type", "unknown"),
+            required_by=doc.get("required_by", doc.get("ports_affected", ["Unknown"])),
+            priority=doc.get("priority", "HIGH")
+        ))
+
+    for rec in parsed.get("recommendations", []):
+        recommendations.append(Recommendation(
+            priority=rec.get("priority", "MEDIUM"),
+            action=rec.get("action", ""),
+            documents=rec.get("documents", []),
+            deadline=rec.get("deadline")
+        ))
+
+    return MissingDocsResponse(
+        success=True,
+        overall_status=overall_status,
+        compliance_score=int(compliance_score),
+        vessel_info=vessel_info,
+        route_ports=port_codes,
+        route_name=route.route_name,
+        missing_documents=missing_docs,
+        expired_documents=expired_docs,
+        expiring_soon_documents=expiring_docs,
+        valid_documents=valid_docs,
+        recommendations=recommendations,
+        agent_reasoning=result.get("crew_output"),
+        total_documents_on_file=len(documents),
+    )
+
+
 # ========== Compliance Checking Endpoints ==========
 
 @router.post("/compliance/check-route", response_model=RouteComplianceResponse)
@@ -644,16 +1112,22 @@ async def check_route_compliance(
             "gross_tonnage": vessel.gross_tonnage,
         }
 
-        doc_service = DocumentService(db)
+        doc_service = DocumentService()
         user_docs = doc_service.get_vessel_documents(request.vessel_id)
-        user_docs_list = [
-            {
-                "document_type": d.document_type.value,
-                "expiry_date": d.expiry_date.isoformat() if d.expiry_date else None,
-                "is_expired": d.expiry_date < datetime.now() if d.expiry_date else False,
-            }
-            for d in user_docs
-        ]
+        user_docs_list = []
+        for d in user_docs:
+            expiry_str = d.get("expiry_date") or ""
+            is_expired = False
+            if expiry_str:
+                try:
+                    is_expired = datetime.fromisoformat(expiry_str) < datetime.now()
+                except (ValueError, TypeError):
+                    pass
+            user_docs_list.append({
+                "document_type": d.get("document_type", "other"),
+                "expiry_date": expiry_str or None,
+                "is_expired": is_expired,
+            })
 
         # Run CrewAI compliance check
         crew_result = await orchestrator.check_compliance(
@@ -1092,15 +1566,20 @@ async def generate_full_compliance_report(
     # Get user documents if requested
     user_documents = []
     if request.include_documents:
-        doc_service = DocumentService(db)
+        doc_service = DocumentService()
         docs = doc_service.get_vessel_documents(request.vessel_id)
-        user_documents = [
-            {
-                "document_type": d.document_type.value if d.document_type else "other",
-                "expiry_date": d.expiry_date.date() if d.expiry_date else None,
-            }
-            for d in docs
-        ]
+        for d in docs:
+            expiry_str = d.get("expiry_date") or ""
+            expiry_date_obj = None
+            if expiry_str:
+                try:
+                    expiry_date_obj = datetime.fromisoformat(expiry_str).date()
+                except (ValueError, TypeError):
+                    pass
+            user_documents.append({
+                "document_type": d.get("document_type", "other"),
+                "expiry_date": expiry_date_obj,
+            })
     
     # Generate the report
     report_generator = get_compliance_report_generator()
@@ -1203,6 +1682,7 @@ async def health_check():
     kb = get_maritime_knowledge_base()
     compliance_orchestrator = get_compliance_orchestrator()
     document_orchestrator = get_document_analysis_orchestrator()
+    missing_docs_orchestrator = get_missing_docs_orchestrator()
 
     return {
         "status": "healthy",
@@ -1212,5 +1692,6 @@ async def health_check():
         },
         "crewai_compliance_available": compliance_orchestrator.is_available,
         "crewai_document_analysis_available": document_orchestrator.is_available,
+        "crewai_missing_docs_available": missing_docs_orchestrator.is_available,
         "timestamp": datetime.now().isoformat(),
     }
