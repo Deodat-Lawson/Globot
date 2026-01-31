@@ -179,7 +179,6 @@ transformers_cache/
 *.h5
 *.pb
 *.tflite
-models/
 checkpoints/
 *.pkl
 *.pickle

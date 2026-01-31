@@ -59,7 +59,7 @@ class CrewAIOrchestrator:
             role="DJI Sales AI Crew",
             goal="Provide accurate, concise, product-aware responses for DJI industrial drones.",
             backstory=(
-                "You are a senior B2B sales engineer for DJI Matrice series. "
+                "You are a senior B2B sales engineer for DJI Matrice series."
                 "You must rely on the provided RAG context. Keep responses concise, "
                 "cite sources when mentioning specs, and flag low confidence for handoff."
             ),
@@ -171,21 +171,30 @@ class CrewAIOrchestrator:
 
     def _init_llm(self):
         """
-        Configure CrewAI to use OpenAI when available; otherwise default to CrewAI's
-        fallback (which may use environment defaults).
+        Configure CrewAI to use Google Gemini or OpenAI.
+        Priority: Google API key > OpenAI API key > fallback
         """
         try:
+            # Try Google Gemini first
+            if self.settings.google_api_key:
+                os.environ.setdefault("GOOGLE_API_KEY", self.settings.google_api_key)
+                return self.LLM(
+                    model="gemini/gemini-3-flash-preview",
+                    api_key=self.settings.google_api_key
+                )
+
+            # Fall back to OpenAI if configured
             if (self.settings.llm_provider or "").lower() == "openai" and self.settings.openai_api_key:
-                # Ensure env vars for CrewAI/OpenAI SDKs
                 os.environ.setdefault("OPENAI_API_KEY", self.settings.openai_api_key)
                 if self.settings.openai_base_url:
                     os.environ.setdefault("OPENAI_BASE_URL", self.settings.openai_base_url)
-                model_name = self.settings.openai_model or "gpt-5.2"
+                model_name = self.settings.openai_model or "gpt-4o-mini"
                 return self.LLM(model=model_name)
-            # Default: let CrewAI use its internal defaults (could be local or OpenAI if env provided)
-            return self.LLM(model="gpt-4o-mini")
+
+            logger.warning("No LLM API key configured (GOOGLE_API_KEY or OPENAI_API_KEY)")
+            return None
         except Exception as exc:
-            logger.warning(f"Failed to init CrewAI LLM, using default agent LLM: {exc}")
+            logger.warning(f"Failed to init CrewAI LLM: {exc}")
             return None
 
 
