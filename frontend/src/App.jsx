@@ -15,6 +15,7 @@ import { DemoPage } from './pages/DemoPage';
 import { PaymentPage } from './pages/PaymentPage';
 import { PortSelectionPage } from './pages/PortSelectionPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { FinancialHedgePage } from './pages/FinancialHedgePage';
 import { CommonHeader } from './components/CommonHeader';
 import { HeaderProvider } from './context/HeaderContext';
 
@@ -50,6 +51,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/pay" replace />} />
               <Route path="/pay" element={<PaymentPage />} />
+              <Route path="/hedge" element={<FinancialHedgePage />} />
               
               <Route path="/usershome" element={<UsersHome />} />
               
