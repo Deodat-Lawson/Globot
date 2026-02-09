@@ -82,7 +82,7 @@
 #             all_docs = self._get_all_documents()
 #             if all_docs:
 #                 self.bm25_retriever = BM25Retriever.from_documents(all_docs)
-#                 self.bm25_retriever.k = 10  # BM25返回top 10
+#                 self.bm25_retriever.k = 10  # BM25 returns top 10
 #                 logger.info(f"BM25 retriever initialization complete, document count: {len(all_docs)}")
 #             else:
 #                 logger.warning("BM25 retriever initialization failed: No documents")
@@ -203,6 +203,7 @@
 #                 k=k,
 #                 filter=filter_dict
 #             )
+#             # Return Top K
 #             return [doc for doc, score in docs_and_scores]
 #         except Exception as e:
 #             logger.error(f"Vector search failed: {e}")
