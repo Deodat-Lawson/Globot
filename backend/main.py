@@ -658,12 +658,8 @@ def classify_customer_bg(customer_id: int, db: Session):
     except Exception as e:
         print(f"Background classification failed: {e}")
 
-    import uvicorn
-    port = int(os.getenv("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
 # Mount static files and catch-all route
-# This should be at the end to avoid intercepting API routes
+# This should be at the end of the script, but before uvicorn.run
 static_path = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_path):
     app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
@@ -674,3 +670,8 @@ async def catch_all(full_path: str):
     if os.path.exists(index_file):
         return FileResponse(index_file)
     return {"message": "API is running, but frontend not found. Build the frontend and place it in 'backend/static'."}
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
