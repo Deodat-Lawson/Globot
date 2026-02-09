@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     )
     
     # Database
-    database_url: str = "postgresql://user:password@localhost:5432/dji_sales_mvp"
+    database_url: str = "sqlite:///./backend/data/demo.db"
     
     # LLM Selection: ollama or openai
     llm_provider: str = "ollama"
@@ -37,19 +37,19 @@ class Settings(BaseSettings):
     google_maps_api_key: Optional[str] = None
 
     # Vector Database
-    chroma_persist_dir: str = "./data/vectordb"
-    maritime_kb_persist_dir: str = "./data/vectordb/maritime"
+    chroma_persist_dir: str = "./backend/data/vectordb"
+    maritime_kb_persist_dir: str = "./backend/data/vectordb/maritime"
     chroma_api_key: Optional[str] = None
     chroma_tenant: Optional[str] = None
     chroma_database: Optional[str] = None
 
     # File Upload
-    upload_dir: str = "./data/uploads"
-    documents_upload_dir: str = "./data/uploads/documents"
+    upload_dir: str = "./backend/data/uploads"
+    documents_upload_dir: str = "./backend/data/uploads/documents"
     max_upload_size_mb: int = 50
 
     # Maritime Compliance Settings
-    maritime_regulations_dir: str = "./data/maritime_regulations"
+    maritime_regulations_dir: str = "./backend/data/maritime_regulations"
 
     # CrewAI Feature Flags
     document_analysis_use_crewai: bool = True

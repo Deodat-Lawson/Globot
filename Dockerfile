@@ -26,6 +26,9 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # Copy backend code
 COPY backend/ ./backend/
 
+# Ensure data directories exist
+RUN mkdir -p backend/data backend/data/vectordb backend/data/uploads
+
 # Copy built frontend assets to the backend's static directory
 COPY --from=frontend-builder /app/frontend/dist ./backend/static
 
