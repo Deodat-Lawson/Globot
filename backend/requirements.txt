@@ -37,14 +37,17 @@ httpx==0.28.1
 httpx-sse==0.4.3
 requests==2.32.5
 
-# Platform-specific
+# Platform-specific (skip on serverless/Vercel)
 uvloop==0.22.1; platform_system != "Windows"
 
-#langchain and transformers dependencies
-transformers==4.31.0
-sentence-transformers==2.3.0
-langchain==0.0.208
-langchain-chroma==0.0.208
-chromadb==0.3.24
+# LangChain ecosystem (modern split packages)
+langchain>=0.3.0,<1.0
+langchain-core>=0.3.0,<1.0
+langchain-community>=0.3.0,<1.0
+langchain-chroma>=0.2.0,<1.0
+langchain-text-splitters>=0.3.0,<1.0
+chromadb>=0.5.0
 
-
+# ML / Embeddings
+transformers>=4.36.0
+sentence-transformers>=2.3.0
