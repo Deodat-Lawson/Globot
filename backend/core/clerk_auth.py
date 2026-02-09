@@ -84,7 +84,12 @@ class ClerkAuth:
             
             # Extract user info
             user_id = payload.get("sub")
-            email = payload.get("email") # Clerk JWT should include email if configured
+            email = (
+                payload.get("email")
+                or payload.get("primary_email_address")
+                or payload.get("email_address")
+                or payload.get("https://clerk.dev/email")
+            )
             if not user_id:
                 raise HTTPException(status_code=401, detail="Token missing subject")
             
@@ -92,7 +97,18 @@ class ClerkAuth:
             settings = get_settings()
             whitelist = [e.strip().lower() for e in settings.admin_whitelist.split(",")]
             
-            role = payload.get("metadata", {}).get("role", "user")
+            metadata = payload.get("metadata", {}) if isinstance(payload.get("metadata"), dict) else {}
+            public_metadata = payload.get("public_metadata", {}) if isinstance(payload.get("public_metadata"), dict) else {}
+            private_metadata = payload.get("private_metadata", {}) if isinstance(payload.get("private_metadata"), dict) else {}
+            unsafe_metadata = payload.get("unsafe_metadata", {}) if isinstance(payload.get("unsafe_metadata"), dict) else {}
+
+            role = (
+                metadata.get("role")
+                or public_metadata.get("role")
+                or private_metadata.get("role")
+                or unsafe_metadata.get("role")
+                or "user"
+            )
             
             # If email is in whitelist, force admin role
             if email and email.lower() in whitelist:

@@ -118,32 +118,16 @@ app.include_router(visual_risk_router)
 from api.analytics import router as analytics_router
 app.include_router(analytics_router)
 
-from api.deps import get_current_user
-
 @app.get("/api/protected")
-def read_protected(request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def read_protected(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Test protected route with Admin Whitelist Check and Stats
     """
     # Clerk JWT claims often store email in 'email' or custom claims.
     # Standard Clerk session token might not have email directly in root.
     
-    # Check whitelist
-    import os
-    whitelist = os.getenv("ADMIN_WHITELIST", "").split(",")
-    # Clean whitespace
-    whitelist = [e.strip() for e in whitelist]
-    
-    # 1. Try to get email from JWT claims (preferred if configured)
-    user_email = user.get("email", "")
-    
-    # 2. If not in JWT, check the Mock Header (Hackathon workaround)
-    if not user_email:
-        user_email = request.headers.get("X-User-Email", "")
-    
-    is_admin = False
-    if user_email and user_email in whitelist:
-        is_admin = True
+    user_email = user.email or ""
+    is_admin = user.role == "admin"
     
     # Collect Stats if Admin
     stats = {}
@@ -161,10 +145,10 @@ def read_protected(request: Request, user: dict = Depends(get_current_user), db:
         
     return {
         "message": "You are authenticated",
-        "user_id": user.get("sub"),
+        "user_id": user.id,
         "email": user_email,
         "is_admin": is_admin,
-        "claims": user,
+        "claims": {"sub": user.id, "email": user.email, "role": user.role},
         "stats": stats
     }
 

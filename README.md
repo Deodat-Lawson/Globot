@@ -120,9 +120,10 @@ python -m venv venv
 pip install -r requirements.txt
 
 # 配置环境变量
-# 在 backend 目录下创建 .env 文件，参考核心配置：
-# CLERK_ISSUER_URL=...
-# ADMIN_WHITELIST=...
+# 在 backend 目录下复制模板并填写 Clerk 信息：
+cp env.example .env
+# CLERK_ISSUER_URL=https://your-clerk-domain.clerk.accounts.dev
+# ADMIN_WHITELIST=your-admin@email.com
 
 # 启动服务器
 python start_server.py
@@ -136,9 +137,10 @@ cd frontend
 npm install
 
 # 配置环境变量
-# 在 frontend 目录下创建 .env 文件：
-# VITE_CLERK_PUBLISHABLE_KEY=...
-# VITE_ADMIN_WHITELIST=...
+# 在 frontend 目录下复制模板并填写 Clerk 信息：
+cp env.example .env
+# VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+# VITE_ADMIN_WHITELIST=your-admin@email.com
 
 npm run dev
 ```
