@@ -1,6 +1,10 @@
-# Stage 1: Build Frontend
 FROM node:20-slim AS frontend-builder
 WORKDIR /app/frontend
+
+# Arguments for build-time environment variables
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./
