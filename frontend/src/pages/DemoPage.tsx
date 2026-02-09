@@ -35,6 +35,18 @@ import {
   createLaneWatchlist
 } from '../services/marketSentinel';
 
+import {
+  RiskAssessment,
+  HedgeRecommendation,
+  assessRisk,
+  recommendStrategy,
+  DEFAULT_OPERATION_PARAMS,
+} from '../services/hedgeApi';
+
+import {
+  getDemoAnalysis,
+} from '../services/visualRiskApi';
+
 // CoT Type Definitions
 interface RAGSource {
   document_id: string;
@@ -135,6 +147,12 @@ export const DemoPage: React.FC = () => {
   const [marketSentinelData, setMarketSentinelData] = useState<MarketSentinelResponse | null>(null);
   const [marketSentinelLoading, setMarketSentinelLoading] = useState(false);
   const [marketSentinelError, setMarketSentinelError] = useState<string | null>(null);
+
+  // === Risk Hedger State ===
+  const [hedgeRiskData, setHedgeRiskData] = useState<RiskAssessment | null>(null);
+  const [hedgeRecommendation, setHedgeRecommendation] = useState<HedgeRecommendation | null>(null);
+  const [hedgeLoading, setHedgeLoading] = useState(false);
+  const [hedgeError, setHedgeError] = useState<string | null>(null);
 
   // === CoT State Management ===
   const [cotSteps, setCotSteps] = useState<CoTStep[]>([]);
@@ -493,6 +511,12 @@ export const DemoPage: React.FC = () => {
     setIsCotActive(false);
     setSelectedShip(null);
 
+    // Reset Hedge state
+    setHedgeRiskData(null);
+    setHedgeRecommendation(null);
+    setHedgeLoading(false);
+    setHedgeError(null);
+
     // Reset Execution state (NEW)
     setExecutionSteps([]);
     setActiveExecutionIndex(-1);
@@ -581,6 +605,78 @@ export const DemoPage: React.FC = () => {
       setMarketSentinelLoading(false);
     }
   }, [origin, destination, selectedRoute, marketSentinelLoading]);
+
+  // Run Hedge Analysis (assess risk + recommend strategy)
+  const runHedgeAnalysis = useCallback(async () => {
+    if (hedgeLoading) return;
+
+    setHedgeLoading(true);
+    setHedgeError(null);
+
+    const timeoutId = setTimeout(() => {
+      setHedgeLoading(false);
+    }, 12000);
+
+    try {
+      const routeName = selectedRoute
+        ? selectedRoute.name
+        : origin && destination
+          ? `${origin.name} → ${destination.name}`
+          : DEFAULT_OPERATION_PARAMS.current_route;
+
+      const params = {
+        ...DEFAULT_OPERATION_PARAMS,
+        current_route: routeName,
+      };
+
+      // Step 1: Assess risk
+      const riskData = await assessRisk(params);
+      setHedgeRiskData(riskData);
+
+      // Step 2: Recommend strategy (auto-detect crisis from market)
+      const isCrisis = riskData.urgency === 'CRITICAL' || riskData.market_regime === 'crisis';
+      const recommendation = await recommendStrategy(params, isCrisis);
+      setHedgeRecommendation(recommendation);
+
+      clearTimeout(timeoutId);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setHedgeError(errorMessage);
+      console.error('Hedge analysis error:', err);
+    } finally {
+      clearTimeout(timeoutId);
+      setHedgeLoading(false);
+    }
+  }, [origin, destination, selectedRoute, hedgeLoading]);
+
+  // Auto-trigger hedge analysis when Market Sentinel detects HIGH/CRITICAL
+  useEffect(() => {
+    if (!marketSentinelData?.signal_packet) return;
+    const severity = marketSentinelData.signal_packet.severity;
+    if ((severity === 'HIGH' || severity === 'CRITICAL') && !hedgeRiskData && !hedgeLoading) {
+      runHedgeAnalysis();
+    }
+  }, [marketSentinelData]);
+
+  // Run Visual Risk Analysis on demand (REST API)
+  const runVisualRiskAnalysis = useCallback(async (scenario: string = 'suez_blockage') => {
+    if (visualRiskAnalyzing) return;
+
+    setVisualRiskAnalyzing(true);
+    setVisualRiskSource('Satellite Feed');
+    setVisualRiskLocation(scenario === 'port_congestion' ? 'Rotterdam Port' : 'Suez Canal');
+    setVisualRiskAnalysis(null);
+
+    try {
+      const result = await getDemoAnalysis(scenario);
+      setVisualRiskAnalysis(result.analysis);
+    } catch (err) {
+      console.error('Visual risk analysis error:', err);
+      setVisualRiskAnalysis(null);
+    } finally {
+      setVisualRiskAnalyzing(false);
+    }
+  }, [visualRiskAnalyzing]);
 
   // Helper to convert port names to codes
   const getPortCode = (portName: string): string | null => {
@@ -837,6 +933,14 @@ export const DemoPage: React.FC = () => {
                   marketSentinelError={marketSentinelError}
                   onRunMarketSentinel={runMarketSentinel}
                   selectedRoute={selectedRoute}
+                  hedgeRiskData={hedgeRiskData}
+                  hedgeRecommendation={hedgeRecommendation}
+                  hedgeLoading={hedgeLoading}
+                  hedgeError={hedgeError}
+                  onRunHedge={runHedgeAnalysis}
+                  isCotActive={isCotActive}
+                  debateCount={debates.length}
+                  executionPhase={executionPhase}
                 />
               )}
               {sidebarTab === 'risk' && (
@@ -847,6 +951,7 @@ export const DemoPage: React.FC = () => {
                     analysisLocation={visualRiskLocation}
                     analysis={visualRiskAnalysis}
                     selectedRoute={selectedRoute}
+                    onRunAnalysis={runVisualRiskAnalysis}
                   />
                 </div>
               )}

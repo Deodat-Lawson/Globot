@@ -40,6 +40,7 @@ interface VisualRiskPanelProps {
   analysisLocation?: string;
   analysis?: VisualRiskAnalysis | null;
   selectedRoute?: { name: string; distance: number; estimatedTime: number; riskLevel: string; waypointNames: string[]; description: string } | null;
+  onRunAnalysis?: (scenario?: string) => void;
 }
 
 // Severity color mapping
@@ -68,6 +69,7 @@ export function VisualRiskPanel({
   analysisLocation = "",
   analysis = null,
   selectedRoute = null,
+  onRunAnalysis,
 }: VisualRiskPanelProps) {
   const severityInfo = analysis ? getSeverityColor(analysis.severity) : null;
 
@@ -344,9 +346,27 @@ export function VisualRiskPanel({
               <div className="text-center py-6">
                 <Satellite className="w-10 h-10 text-white/20 mx-auto mb-3" />
                 <p className="text-xs text-white/40 mb-1">Visual Risk Analysis</p>
-                <p className="text-[10px] text-white/30">
+                <p className="text-[10px] text-white/30 mb-4">
                   Waiting for satellite imagery feed...
                 </p>
+                {onRunAnalysis && (
+                  <div className="flex flex-col gap-2 items-center">
+                    <button
+                      onClick={() => onRunAnalysis('suez_blockage')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#9b59b6]/20 border border-[#9b59b6]/40 rounded-sm text-[11px] font-medium text-[#9b59b6] hover:bg-[#9b59b6]/30 transition-all"
+                    >
+                      <Eye className="w-3 h-3" />
+                      Analyze Suez Canal
+                    </button>
+                    <button
+                      onClick={() => onRunAnalysis('port_congestion')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#9b59b6]/20 border border-[#9b59b6]/40 rounded-sm text-[11px] font-medium text-[#9b59b6] hover:bg-[#9b59b6]/30 transition-all"
+                    >
+                      <Anchor className="w-3 h-3" />
+                      Analyze Port Congestion
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
