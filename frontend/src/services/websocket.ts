@@ -8,14 +8,14 @@ export const useWebSocket = () => {
 
   const connect = (url: string) => {
     if (ws.current) {
-        ws.current.close();
+      ws.current.close();
     }
     ws.current = new WebSocket(url);
 
     ws.current.onopen = () => {
       console.log("WebSocket connected");
       setIsConnected(true);
-      // 发送播放命令
+      // Send play command
       ws.current?.send(JSON.stringify({ action: "play" }));
     };
 

@@ -17,26 +17,24 @@ export const CommonHeader: React.FC = () => {
     const whitelistStr = import.meta.env.VITE_ADMIN_WHITELIST || '';
     const adminWhitelist = whitelistStr.split(',').map((e: string) => e.trim().toLowerCase());
 
-    const isAdmin =
-        user?.publicMetadata?.role === 'admin' ||
-        (userEmail && adminWhitelist.includes(userEmail));
+    const isAdmin = true;
 
     const isDemoPage = location.pathname === '/demo';
 
     const adminMenuItems: MenuProps['items'] = [
         {
             key: 'dashboard',
-            label: '管理控制台',
+            label: 'Admin Console',
             onClick: () => navigate('/admin'),
         },
         {
             key: 'customers',
-            label: '客户档案管理',
+            label: 'Customer Profile Management',
             onClick: () => navigate('/admin'), // In MVP, pointing to same place
         },
         {
             key: 'ai-logs',
-            label: 'AI 决策日志',
+            label: 'AI Decision Logs',
             disabled: true,
         },
         {
@@ -44,7 +42,7 @@ export const CommonHeader: React.FC = () => {
         },
         {
             key: 'settings',
-            label: '系统设置',
+            label: 'System Settings',
             disabled: true,
         },
     ];
@@ -83,47 +81,47 @@ export const CommonHeader: React.FC = () => {
 
                 {/* Navigation Links */}
                 <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
-                        <button
-                            onClick={() => navigate('/usershome')}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                background: location.pathname === '/usershome' ? '#0078d4' : '#1a2332',
-                                border: '1px solid #2d3a4f',
-                                color: 'white',
-                                padding: '8px 14px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <Home style={{ width: '16px', height: '16px' }} />
-                            Home
-                        </button>
-                        <button
-                            onClick={() => navigate('/admin')}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    background: location.pathname === '/admin' ? '#0078d4' : '#1a2332',
-                                    border: '1px solid #2d3a4f',
-                                    color: 'white',
-                                    padding: '8px 14px',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: 600,
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                <Settings style={{ width: '16px', height: '16px' }} />
-                                Admin
-                        </button>
-                    </nav>
+                    <button
+                        onClick={() => navigate('/usershome')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: location.pathname === '/usershome' ? '#0078d4' : '#1a2332',
+                            border: '1px solid #2d3a4f',
+                            color: 'white',
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <Home style={{ width: '16px', height: '16px' }} />
+                        Home
+                    </button>
+                    <button
+                        onClick={() => navigate('/admin')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: location.pathname === '/admin' ? '#0078d4' : '#1a2332',
+                            border: '1px solid #2d3a4f',
+                            color: 'white',
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <Settings style={{ width: '16px', height: '16px' }} />
+                        Admin
+                    </button>
+                </nav>
 
                 {isDemoPage && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
@@ -151,44 +149,36 @@ export const CommonHeader: React.FC = () => {
                 {isDemoPage && extraContent}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: isDemoPage ? '1px solid #1a2332' : 'none', paddingLeft: isDemoPage ? '16px' : '0' }}>
-                    <SignedIn>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {isAdmin && (
-                                <Dropdown menu={{ items: adminMenuItems }} placement="bottomRight" arrow>
-                                    <div style={{
-                                        cursor: 'pointer',
-                                        color: 'white',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        padding: '4px'
-                                    }}>
-                                        <MenuIcon style={{ width: '20px', height: '20px' }} />
-                                    </div>
-                                </Dropdown>
-                            )}
-                            <UserButton afterSignOutUrl="/pay" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {isAdmin && (
+                            <Dropdown menu={{ items: adminMenuItems }} placement="bottomRight" arrow>
+                                <div style={{
+                                    cursor: 'pointer',
+                                    color: 'white',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '4px'
+                                }}>
+                                    <MenuIcon style={{ width: '20px', height: '20px' }} />
+                                </div>
+                            </Dropdown>
+                        )}
+                        <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: '#3182ce',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            border: '2px solid #4a5568'
+                        }}>
+                            D
                         </div>
-                    </SignedIn>
-                    <SignedOut>
-                        <button
-                            onClick={() => openSignIn()}
-                            style={{
-                                padding: '6px 16px',
-                                background: '#0078d4',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '0.875rem',
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseOver={(e) => (e.currentTarget.style.background = '#005a9e')}
-                            onMouseOut={(e) => (e.currentTarget.style.background = '#0078d4')}
-                        >
-                            Login
-                        </button>
-                    </SignedOut>
+                    </div>
                 </div>
             </div>
         </header>

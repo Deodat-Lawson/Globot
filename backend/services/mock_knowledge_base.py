@@ -19,8 +19,8 @@ from typing import List, Optional
 
 class MockKnowledgeBase:
     """
-    Mock 知识库加载器，用于 Globot Agent 单元测试。
-    将 JSON 格式的 Mock 数据转换为 LangChain Document 对象。
+    Mock knowledge base loader for Globot Agent unit tests.
+    Converts JSON format Mock data to LangChain Document objects.
     """
     
     def __init__(self, mock_data_dir: Optional[str] = None):

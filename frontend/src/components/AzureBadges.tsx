@@ -31,14 +31,14 @@ export const AzureBadges: React.FC = () => {
     },
   ]);
 
-  // 定期更新统计数据
+  // Update stats periodically
   useEffect(() => {
     const fetchStats = async () => {
       try {
         // Mock API call or real endpoint
-        // const response = await fetch("http://localhost:8000/api/v2/azure/stats");
+        // const response = await fetch("http://localhost:8000/api/v2/google/stats");
         // const data = await response.json();
-        
+
         // Mock data update
         setServices((prev) => {
           const newCalls = [
@@ -79,11 +79,11 @@ export const AzureBadges: React.FC = () => {
           ];
         });
       } catch (err) {
-        console.error("Failed to fetch Azure stats:", err);
+        console.error("Failed to fetch Google stats:", err);
       }
     };
 
-    const interval = setInterval(fetchStats, 5000); // 每5秒更新
+    const interval = setInterval(fetchStats, 5000); // Update every 5 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -92,16 +92,16 @@ export const AzureBadges: React.FC = () => {
   return (
     <div className="p-4 border-b border-[#1a2332] box-border">
       <div className="flex items-center gap-2 mb-4 box-border">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#0078d4]" />
+        <div className="w-1.5 h-1.5 rounded-full bg-[#4285F4]" />
         <h2 className="text-xs font-semibold text-white/60 tracking-wider uppercase leading-tight text-left m-0 p-0">
-          Azure OpenAI Agents
+          Google Gemini Agents
         </h2>
       </div>
 
       <div className="space-y-3 box-border">
         <AIAgentCard
           icon={Brain}
-          name="Azure OpenAI"
+          name="Google Gemini"
           role="Primary reasoning engine"
           status={getServiceById("openai")?.status || "idle"}
           lastAction={getServiceById("openai")?.lastAction || ""}
@@ -109,7 +109,7 @@ export const AzureBadges: React.FC = () => {
 
         <AIAgentCard
           icon={Search}
-          name="Azure AI Search"
+          name="Vertex AI Search"
           role="Real-time intelligence"
           status={getServiceById("search")?.status || "thinking"}
           lastAction={getServiceById("search")?.lastAction || ""}
@@ -117,7 +117,7 @@ export const AzureBadges: React.FC = () => {
 
         <AIAgentCard
           icon={Cog}
-          name="Azure Cognitive"
+          name="Google AI Services"
           role="Pattern recognition"
           status={getServiceById("cognitive")?.status || "idle"}
           lastAction={getServiceById("cognitive")?.lastAction || ""}

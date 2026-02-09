@@ -1,23 +1,23 @@
 /**
  * Maritime Route API Service
- * 提供从外部API获取真实航运路线的功能
+ * Provides functionality to fetch real shipping routes from external APIs
  * 
- * 可用的API选项：
- * 1. OpenRouteService (免费，但需要API密钥)
- * 2. GraphHopper (免费层有限制)
- * 3. 自定义后端服务（推荐：使用真实AIS数据）
+ * Available API options:
+ * 1. OpenRouteService (Free, but requires API key)
+ * 2. GraphHopper (Limited free tier)
+ * 3. Custom backend service (Recommended: use real AIS data)
  */
 
 export interface RouteAPIResponse {
   coordinates: [number, number][];
-  distance: number; // 海里
-  duration?: number; // 小时
+  distance: number; // Nautical Miles
+  duration?: number; // Hours
 }
 
 /**
- * 使用OpenRouteService获取航运路线
- * 注意：需要API密钥，且OpenRouteService主要针对陆路交通
- * 对于海运，建议使用专门的航运API
+ * Get shipping route using OpenRouteService
+ * Note: Requires API key, and OpenRouteService is primarily for land transport
+ * For maritime transport, specialized maritime APIs are recommended
  */
 export async function getRouteFromOpenRouteService(
   start: [number, number],
@@ -30,17 +30,17 @@ export async function getRouteFromOpenRouteService(
   }
 
   try {
-    // OpenRouteService的路线API
+    // OpenRouteService Directions API
     const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${apiKey}&start=${start[0]},${start[1]}&end=${end[0]},${end[1]}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.statusText}`);
     }
 
     const data = await response.json();
-    
-    // 提取坐标点
+
+    // Extract coordinates
     const coordinates: [number, number][] = data.features[0]?.geometry?.coordinates?.map(
       (coord: number[]) => [coord[0], coord[1]]
     ) || [];
@@ -57,8 +57,8 @@ export async function getRouteFromOpenRouteService(
 }
 
 /**
- * 使用GraphHopper获取路线
- * 注意：GraphHopper也主要针对陆路，海运需要特殊配置
+ * Get route using GraphHopper
+ * Note: GraphHopper is also primarily for land, maritime requires special configuration
  */
 export async function getRouteFromGraphHopper(
   start: [number, number],
@@ -72,14 +72,14 @@ export async function getRouteFromGraphHopper(
 
   try {
     const url = `https://graphhopper.com/api/1/route?point=${start[1]},${start[0]}&point=${end[1]},${end[0]}&vehicle=car&key=${apiKey}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.statusText}`);
     }
 
     const data = await response.json();
-    
+
     const coordinates: [number, number][] = data.paths[0]?.points?.coordinates?.map(
       (coord: number[]) => [coord[0], coord[1]]
     ) || [];
@@ -96,8 +96,8 @@ export async function getRouteFromGraphHopper(
 }
 
 /**
- * 从后端API获取真实航运路线
- * 推荐：在后端集成MarineTraffic或类似服务
+ * Fetch real maritime route from backend API
+ * Recommended: Integrate MarineTraffic or similar services in the backend
  */
 export async function getMaritimeRouteFromBackend(
   start: [number, number],
@@ -120,7 +120,7 @@ export async function getMaritimeRouteFromBackend(
     }
 
     const data = await response.json();
-    
+
     return {
       coordinates: data.waypoints || [],
       distance: data.distance || 0,
@@ -133,8 +133,8 @@ export async function getMaritimeRouteFromBackend(
 }
 
 /**
- * 计算大圆航线（Great Circle Route）
- * 这是两点间最短的球面距离，但不考虑避开陆地
+ * Calculate Great Circle Route
+ * This is the shortest spherical distance between two points, without land avoidance
  */
 export function calculateGreatCircleRoute(
   start: [number, number],
@@ -143,23 +143,23 @@ export function calculateGreatCircleRoute(
 ): [number, number][] {
   const [lon1, lat1] = start;
   const [lon2, lat2] = end;
-  
+
   const coordinates: [number, number][] = [[lon1, lat1]];
-  
-  // 转换为弧度
+
+  // Convert to radians
   const lat1Rad = lat1 * Math.PI / 180;
   const lon1Rad = lon1 * Math.PI / 180;
   const lat2Rad = lat2 * Math.PI / 180;
   const lon2Rad = lon2 * Math.PI / 180;
-  
+
   const d = 2 * Math.asin(
     Math.sqrt(
       Math.sin((lat2Rad - lat1Rad) / 2) ** 2 +
       Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin((lon2Rad - lon1Rad) / 2) ** 2
     )
   );
-  
-  // 生成中间点
+
+  // Generate intermediate points
   for (let i = 1; i < numPoints; i++) {
     const f = i / numPoints;
     const a = Math.sin((1 - f) * d) / Math.sin(d);
@@ -167,32 +167,32 @@ export function calculateGreatCircleRoute(
     const x = a * Math.cos(lat1Rad) * Math.cos(lon1Rad) + b * Math.cos(lat2Rad) * Math.cos(lon2Rad);
     const y = a * Math.cos(lat1Rad) * Math.sin(lon1Rad) + b * Math.cos(lat2Rad) * Math.sin(lon2Rad);
     const z = a * Math.sin(lat1Rad) + b * Math.sin(lat2Rad);
-    
+
     const lat = Math.atan2(z, Math.sqrt(x ** 2 + y ** 2)) * 180 / Math.PI;
     const lon = Math.atan2(y, x) * 180 / Math.PI;
-    
+
     coordinates.push([lon, lat]);
   }
-  
+
   coordinates.push([lon2, lat2]);
   return coordinates;
 }
 
 /**
- * 推荐的航运API服务：
+ * Recommended Maritime API Services:
  * 
  * 1. MarineTraffic API (https://www.marinetraffic.com/en/ais-api-services)
- *    - 提供真实AIS船舶数据
- *    - 可以获取历史航线
- *    - 需要付费订阅
+ *    - Provide real-time AIS vessel data
+ *    - Historical routes available
+ *    - Requires paid subscription
  * 
  * 2. VesselFinder API
- *    - 类似MarineTraffic
- *    - 提供船舶追踪和航线数据
+ *    - Similar to MarineTraffic
+ *    - Provides vessel tracking and route data
  * 
- * 3. 自定义解决方案：
- *    - 在后端使用OpenStreetMap的海洋数据
- *    - 使用路径规划算法（如A*）在海洋网格中寻找路径
- *    - 结合真实AIS数据优化航线
+ * 3. Custom Solutions:
+ *    - Use OpenStreetMap ocean data on the backend
+ *    - Use pathfinding algorithms (e.g., A*) in marine grids
+ *    - Optimize routes using real AIS data
  */
 

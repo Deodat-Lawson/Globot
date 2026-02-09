@@ -49,7 +49,7 @@ interface RAGSource {
   section?: string;
   content_snippet?: string;
   relevance_score: number;
-  azure_service: string;
+  google_service: string;
 }
 
 interface CoTStep {
@@ -59,7 +59,7 @@ interface CoTStep {
   title: string;
   content: string;
   confidence: number;
-  azure_service: string;
+  google_service: string;
   sources?: RAGSource[];
   duration_ms?: number;
 }
@@ -99,7 +99,7 @@ interface ExecutionStep {
   action: string;
   title: string;
   description: string;
-  azure_service: string;
+  google_service: string;
   duration_ms: number;
   status?: "pending" | "executing" | "complete";
 }
@@ -188,30 +188,30 @@ export function AgentCoTPanel({
     icon: React.ReactNode;
     count?: number;
   }[] = [
-    {
-      id: "stream",
-      label: "Reasoning",
-      icon: <ListTree className="w-3.5 h-3.5" />,
-      count: steps.length,
-    },
-    {
-      id: "debate",
-      label: "Debate",
-      icon: <Swords className="w-3.5 h-3.5" />,
-      count: debates.length,
-    },
-    {
-      id: "decision",
-      label: "Decision",
-      icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-    },
-    {
-      id: "execution",
-      label: "Execution",
-      icon: <Rocket className="w-3.5 h-3.5" />,
-      count: executionSteps.length > 0 ? executionSteps.length : undefined,
-    },
-  ];
+      {
+        id: "stream",
+        label: "Reasoning",
+        icon: <ListTree className="w-3.5 h-3.5" />,
+        count: steps.length,
+      },
+      {
+        id: "debate",
+        label: "Debate",
+        icon: <Swords className="w-3.5 h-3.5" />,
+        count: debates.length,
+      },
+      {
+        id: "decision",
+        label: "Decision",
+        icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+      },
+      {
+        id: "execution",
+        label: "Execution",
+        icon: <Rocket className="w-3.5 h-3.5" />,
+        count: executionSteps.length > 0 ? executionSteps.length : undefined,
+      },
+    ];
 
   return (
     <div className="bg-[#0a0e1a] border-b border-[#1a2332]">
@@ -274,11 +274,10 @@ export function AgentCoTPanel({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all ${
-                    activeTab === tab.id
-                      ? "text-[#4a90e2] border-b-2 border-[#4a90e2] bg-[#4a90e2]/5"
-                      : "text-white/40 hover:text-white/60"
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all ${activeTab === tab.id
+                    ? "text-[#4a90e2] border-b-2 border-[#4a90e2] bg-[#4a90e2]/5"
+                    : "text-white/40 hover:text-white/60"
+                    }`}
                 >
                   {tab.icon}
                   <span>{tab.label}</span>
@@ -311,12 +310,12 @@ export function AgentCoTPanel({
                       <ReasoningStep
                         key={step.step_id}
                         stepId={step.step_id}
-                        agentId={step.agent_id}
+                        agent_id={step.agent_id}
                         action={step.action}
                         title={step.title}
                         content={step.content}
                         confidence={step.confidence}
-                        azureService={step.azure_service}
+                        googleService={step.google_service}
                         sources={step.sources}
                         durationMs={step.duration_ms}
                         isActive={index === activeStepIndex}
@@ -491,7 +490,7 @@ export function AgentCoTPanel({
                                   <AlertDialogCancel className="bg-[#1a2332] text-white/70 border-[#1a2332] hover:bg-[#252f42] hover:text-white">
                                     Cancel
                                   </AlertDialogCancel>
-                                  <AlertDialogAction 
+                                  <AlertDialogAction
                                     onClick={() => onConfirmDecision("approve")}
                                     className="bg-[#5a9a7a] hover:bg-[#4a8a6a] text-white"
                                   >
@@ -501,7 +500,7 @@ export function AgentCoTPanel({
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
-                            
+
                             <button
                               onClick={() => onConfirmDecision("details")}
                               className="flex-1 flex items-center justify-center gap-2 py-2.5 min-h-[44px] bg-[#1a2332] hover:bg-[#252f42] text-white/70 text-xs font-medium rounded-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#4a90e2]/50"
@@ -509,7 +508,7 @@ export function AgentCoTPanel({
                               <FileText className="w-4 h-4" />
                               Details
                             </button>
-                            
+
                             {/* Override with confirmation dialog */}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -537,7 +536,7 @@ export function AgentCoTPanel({
                                   <AlertDialogCancel className="bg-[#1a2332] text-white/70 border-[#1a2332] hover:bg-[#252f42] hover:text-white">
                                     Cancel
                                   </AlertDialogCancel>
-                                  <AlertDialogAction 
+                                  <AlertDialogAction
                                     onClick={() => onConfirmDecision("manual")}
                                     className="bg-[#c75050] hover:bg-[#b74040] text-white"
                                   >

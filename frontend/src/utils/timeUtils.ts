@@ -1,33 +1,33 @@
 /**
  * UTC Time Utilities
- * 统一使用 UTC 时间的工具函数
+ * Utility functions for unified UTC time handling
  */
 
 /**
- * 获取当前 UTC 时间的 ISO 字符串
+ * Get current UTC time as an ISO string
  */
 export const getUTCISOString = (): string => {
   return new Date().toISOString();
 };
 
 /**
- * 获取当前 UTC 时间戳（毫秒）
+ * Get current UTC timestamp (milliseconds)
  */
 export const getUTCTimestamp = (): number => {
   return Date.now();
 };
 
 /**
- * 格式化 UTC 时间为显示字符串
- * @param date - Date 对象、ISO 字符串或时间戳
- * @param format - 格式选项
+ * Format UTC time as a display string
+ * @param date - Date object, ISO string, or timestamp
+ * @param format - Format options
  */
 export const formatUTCTime = (
   date: Date | string | number,
   format: 'time' | 'date' | 'datetime' | 'full' = 'datetime'
 ): string => {
   const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-  
+
   const options: Intl.DateTimeFormatOptions = {
     timeZone: 'UTC',
   };
@@ -69,13 +69,13 @@ export const formatUTCTime = (
 };
 
 /**
- * 格式化 UTC 时间为简短时间字符串 (HH:MM:SS)
+ * Format UTC time as a short time string (HH:MM:SS)
  */
 export const formatUTCTimeShort = (date?: Date | string | number): string => {
-  const d = date 
+  const d = date
     ? (typeof date === 'string' || typeof date === 'number' ? new Date(date) : date)
     : new Date();
-  
+
   return d.toLocaleTimeString('en-US', {
     timeZone: 'UTC',
     hour12: false,
@@ -86,13 +86,13 @@ export const formatUTCTimeShort = (date?: Date | string | number): string => {
 };
 
 /**
- * 格式化 UTC 日期时间为中文显示格式
- * @param date - Date 对象、ISO 字符串或时间戳
+ * Format UTC date time for English display format
+ * @param date - Date object, ISO string, or timestamp
  */
-export const formatUTCDateTimeCN = (date: Date | string | number): string => {
+export const formatUTCDateTime = (date: Date | string | number): string => {
   const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-  
-  return d.toLocaleString('zh-CN', {
+
+  return d.toLocaleString('en-US', {
     timeZone: 'UTC',
     year: 'numeric',
     month: '2-digit',
@@ -105,7 +105,7 @@ export const formatUTCDateTimeCN = (date: Date | string | number): string => {
 };
 
 /**
- * 获取 UTC 时间的各个部分
+ * Get various parts of UTC time
  */
 export const getUTCParts = (date?: Date): {
   year: number;
@@ -129,24 +129,24 @@ export const getUTCParts = (date?: Date): {
 };
 
 /**
- * 计算两个时间之间的差值（毫秒）
+ * Calculate difference between two times (milliseconds)
  */
 export const getTimeDiff = (
   start: Date | string | number,
   end: Date | string | number
 ): number => {
-  const startTime = typeof start === 'string' || typeof start === 'number' 
-    ? new Date(start).getTime() 
+  const startTime = typeof start === 'string' || typeof start === 'number'
+    ? new Date(start).getTime()
     : start.getTime();
   const endTime = typeof end === 'string' || typeof end === 'number'
     ? new Date(end).getTime()
     : end.getTime();
-  
+
   return endTime - startTime;
 };
 
 /**
- * 格式化时间差为可读字符串
+ * Format time difference as a readable string
  */
 export const formatTimeDiff = (diffMs: number): string => {
   const seconds = Math.floor(diffMs / 1000);
@@ -154,9 +154,10 @@ export const formatTimeDiff = (diffMs: number): string => {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) return `${days}天 ${hours % 24}小时`;
-  if (hours > 0) return `${hours}小时 ${minutes % 60}分钟`;
-  if (minutes > 0) return `${minutes}分钟 ${seconds % 60}秒`;
-  return `${seconds}秒`;
+  if (days > 0) return `${days}d ${hours % 24}h`;
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+  return `${seconds}s`;
 };
+
 

@@ -26,7 +26,7 @@ interface ExecutionStep {
   action: string;
   title: string;
   description: string;
-  azure_service: string;
+  google_service: string;
   duration_ms: number;
   status?: "pending" | "executing" | "complete";
 }

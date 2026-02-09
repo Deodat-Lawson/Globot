@@ -38,7 +38,7 @@ class CrewAIOrchestrator:
         self.settings = get_settings()
         self.llm = self._init_llm()
 
-    def chat(self, customer_id: int, message: str, language: str = "zh-cn") -> Dict:
+    def chat(self, customer_id: int, message: str, language: str = "en-us") -> Dict:
         """
         Run the CrewAI-powered flow.
 
@@ -92,7 +92,7 @@ class CrewAIOrchestrator:
         parsed.setdefault("should_handoff", parsed.get("confidence", 0.0) < 0.7)
 
         return {
-            "answer": parsed.get("answer", "抱歉，我需要稍后再确认这个问题。"),
+            "answer": parsed.get("answer", "I'm sorry, I need to confirm this issue later."),
             "confidence": float(parsed.get("confidence", 0.6)),
             "should_handoff": bool(parsed.get("should_handoff", False)),
             "product_tag": parsed.get("product_tag"),
@@ -101,31 +101,31 @@ class CrewAIOrchestrator:
     # ---------- internal helpers ----------
     def _build_context(self, docs: List) -> str:
         if not docs:
-            return "无检索结果"
+            return "No retrieval results"
         parts = []
         for doc in docs:
             meta = doc.metadata or {}
-            product = meta.get("product_tag", "未知产品")
-            doc_type = meta.get("doc_type", "文档")
+            product = meta.get("product_tag", "Unknown Product")
+            doc_type = meta.get("doc_type", "Document")
             parts.append(f"[{product} - {doc_type}] {doc.page_content[:400]}")
         return "\n\n---\n\n".join(parts)
 
     def _build_task_description(self, message: str, context: str, language: str) -> str:
         return f"""
-你是大疆（DJI）工业无人机销售工程师。请基于下方检索上下文回答客户提问。
+You are a DJI industrial drone sales engineer. Please answer customer questions based on the retrieval context below.
 
-检索上下文:
+Retrieval Context:
 {context}
 
 客户消息:
 {message}
 
-要求:
-- 直接回答，不要冗长开场白
-- 技术参数需标注来源，如“根据M30用户手册”
-- 语言: {'中文' if language == 'zh-cn' else 'English'}
-- 长度: 50-120字
-- 输出JSON，示例:
+Requirements:
+- Answer directly, no lengthy prologues
+- Technical parameters must be cited, e.g., "According to M30 User Manual"
+- Language: {'Chinese' if language == 'zh-cn' else 'English'}
+- Length: 50-120 words
+- Output JSON, example:
 {{
   "answer": "...",
   "confidence": 0.85,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
 import {
   SignedIn,
   SignedOut,
@@ -42,65 +42,38 @@ function RouteTracker() {
 
 function App() {
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider locale={enUS}>
       <HeaderProvider>
-          <BrowserRouter>
-            <CommonHeader />
-            <RouteTracker />
-            <Routes>
-              <Route path="/" element={<Navigate to="/pay" replace />} />
-              <Route path="/pay" element={<PaymentPage />} />
-              
-              <Route path="/usershome" element={<UsersHome />} />
-              
-              {/* Authentication Routes */}
-              <Route path="/sign-in/*" element={<SignInPage />} />
-              <Route
-                path="/sign-up/*"
-                element={<div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}><SignUp routing="path" path="/sign-up" /></div>}
-              />
+        <BrowserRouter>
+          <CommonHeader />
+          <RouteTracker />
+          <Routes>
+            <Route path="/" element={<Navigate to="/pay" replace />} />
+            <Route path="/pay" element={<PaymentPage />} />
 
-              <Route
-                path="/port"
-                element={
-                  <>
-                    <SignedIn>
-                      <PortSelectionPage />
-                    </SignedIn>
-                    <SignedOut>
-                      <RedirectToSignIn />
-                    </SignedOut>
-                  </>
-                }
-              />
-              <Route
-                path="/demo"
-                element={
-                  <>
-                    <SignedIn>
-                      <DemoPage />
-                    </SignedIn>
-                    <SignedOut>
-                      <RedirectToSignIn />
-                    </SignedOut>
-                  </>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <>
-                    <SignedIn>
-                      <AdminPage />
-                    </SignedIn>
-                    <SignedOut>
-                      <RedirectToSignIn />
-                    </SignedOut>
-                  </>
-                }
-              />
-            </Routes>
-          </BrowserRouter>
+            <Route path="/usershome" element={<UsersHome />} />
+
+            {/* Authentication Routes */}
+            <Route path="/sign-in/*" element={<SignInPage />} />
+            <Route
+              path="/sign-up/*"
+              element={<div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}><SignUp routing="path" path="/sign-up" /></div>}
+            />
+
+            <Route
+              path="/port"
+              element={<PortSelectionPage />}
+            />
+            <Route
+              path="/demo"
+              element={<DemoPage />}
+            />
+            <Route
+              path="/admin"
+              element={<AdminPage />}
+            />
+          </Routes>
+        </BrowserRouter>
       </HeaderProvider>
     </ConfigProvider>
   );

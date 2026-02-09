@@ -1,9 +1,9 @@
-﻿"""4:55 PM Crisis瀹屾暣Mock鏁版嵁"""
+﻿"""4:55 PM Crisis Complete Mock Data"""
 
 from datetime import datetime, timedelta
 from typing import Dict, List
 
-# 瀹屾暣鏃堕棿绾挎暟鎹?
+# Complete timeline data
 CRISIS_TIMELINE = {
     "t0_normal_state": {
         "timestamp": "2025-12-26T16:50:00Z",
@@ -53,18 +53,18 @@ CRISIS_TIMELINE = {
         "description": "United States Trade Representative announces imminent tariff hike on specific HS codes.",
         "source": "Bing News API",
         "confidence": 0.997,
-        "azure_service": "Azure Cognitive Services",
+        "google_service": "Google AI Services",
         "timestamp": "2025-12-26T16:55:00Z",
         "affected_shipments": ["SHP-001", "SHP-003"]
     },
     "t2_ai_reasoning": {
         "fermi_estimation": {
             "reasoning_steps": [
-                "姝ラ1: 璇嗗埆鍙楀奖鍝?HS Code (9018.90, 8471.60)",
-                "姝ラ2: 璁＄畻娼滃湪鍏崇◣澧炲姞 (25% -> 45%)",
-                "姝ラ3: 浼扮畻鎬昏揣鍊奸闄?($335,000 * 20% = $67,000)",
-                "姝ラ4: 鎼滅储鏇夸唬鐗╂祦鏂规 (缁忕敱澧ㄨタ鍝ユ垨鍔犳嬁澶ц浆杩?",
-                "姝ラ5: 璇勪及鍚堣鎬ч闄╀笌鏃堕棿鎴愭湰"
+                "Step 1: Identify affected HS Codes (9018.90, 8471.60)",
+                "Step 2: Calculate potential tariff increase (25% -> 45%)",
+                "Step 3: Estimate total cargo value at risk ($335,000 * 20% = $67,000)",
+                "Step 4: Search alternative logistics solutions (via Mexico or Canada transshipment)",
+                "Step 5: Evaluate compliance risk vs time cost"
             ]
         }
     },
@@ -109,7 +109,7 @@ CRISIS_TIMELINE = {
                 "details": "Booking confirmed: BKG-998877"
             },
             {
-                "service": "Customs Form Generation (Azure Form Recognizer)",
+                "service": "Customs Form Generation (Google Document AI)",
                 "status": "SUCCESS",
                 "details": "Generated Form 7501"
             },

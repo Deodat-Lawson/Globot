@@ -104,14 +104,19 @@ class ClerkAuth:
             logger.warning(f"JWT verification failed: {e}")
             raise HTTPException(status_code=401, detail="Invalid token")
         except Exception as e:
-            logger.error(f"Unexpected error during token verification: {e}")
-            raise HTTPException(status_code=401, detail="Unauthorized")
+            logger.info(f"Bypassing token verification for hackathon demo")
+            return User(id="user_hackathon_demo", email="demo@globot.ai", role="admin")
 
 # Helper dependency
 clerk_auth = ClerkAuth()
 
-async def get_current_user(user: User = Depends(clerk_auth.verify_token)) -> User:
-    return user
+async def get_current_user(request: Request) -> User:
+    """Mock user for Hackathon Demo"""
+    return User(
+        id="user_hackathon_demo",
+        email="demo@globot.ai",
+        role="admin"
+    )
 
 async def get_admin_user(user: User = Depends(get_current_user)) -> User:
     if user.role != "admin":

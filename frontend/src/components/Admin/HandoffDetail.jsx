@@ -31,26 +31,26 @@ const HandoffDetail = () => {
   const fetchHandoffDetail = async () => {
     try {
       setLoading(true);
-      // 获取转人工详情
+      // Get handoff details
       const handoffsRes = await chatAPI.getHandoffs();
       const handoffData = handoffsRes.data.handoffs.find(h => h.id === parseInt(handoffId));
-      
+
       if (!handoffData) {
-        antMessage.error('转人工记录不存在');
+        antMessage.error('Handoff record does not exist');
         navigate('/admin/handoffs');
         return;
       }
-      
+
       setHandoff(handoffData);
       setCustomer(handoffData.customer);
-      
-      // 获取对话历史 - 修复：使用 conversation_id 而不是 customer_id
+
+      // Get conversation history - Fixed: Use conversation_id instead of customer_id
       const convRes = await chatAPI.getConversation(handoffData.conversation_id);
-      // 将单个对话包装成数组，保持与原有渲染逻辑兼容
+      // Wrap single conversation in array to maintain compatibility with original rendering logic
       setConversations(convRes.data ? [convRes.data] : []);
     } catch (error) {
-      console.error('获取详情失败:', error);
-      antMessage.error('获取详情失败');
+      console.error('Failed to fetch details:', error);
+      antMessage.error('Failed to fetch details');
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ const HandoffDetail = () => {
 
   const handleSendReply = async () => {
     if (!replyContent.trim()) {
-      antMessage.warning('请输入回复内容');
+      antMessage.warning('Please enter your reply');
       return;
     }
 
@@ -71,30 +71,30 @@ const HandoffDetail = () => {
       await chatAPI.sendHumanMessage({
         conversation_id: handoff.conversation_id,
         content: replyContent,
-        agent_name: agentName || '人工客服'
+        agent_name: agentName || 'Human Support'
       });
-      
-      antMessage.success('回复发送成功');
+
+      antMessage.success('Reply sent successfully');
       setReplyContent('');
-      
-      // 刷新对话
+
+      // Refresh conversation
       await fetchHandoffDetail();
     } catch (error) {
-      console.error('发送失败:', error);
-      antMessage.error('发送失败');
+      console.error('Failed to send:', error);
+      antMessage.error('Failed to send');
     } finally {
       setSending(false);
     }
   };
 
   const showTakeoverModal = () => {
-    setTempAgentName(agentName || '销售-李四');
+    setTempAgentName(agentName || 'Sales-John Doe');
     setTakeoverModalVisible(true);
   };
 
   const handleTakeOver = async () => {
     if (!tempAgentName.trim()) {
-      antMessage.warning('请输入您的姓名');
+      antMessage.warning('Please enter your name');
       return;
     }
 
@@ -104,26 +104,26 @@ const HandoffDetail = () => {
         status: 'processing',
         agent_name: tempAgentName
       });
-      
+
       setAgentName(tempAgentName);
-      antMessage.success(`${tempAgentName} 已接手对话`);
-      
-      // 发送浏览器通知
+      antMessage.success(`${tempAgentName} has taken over the conversation`);
+
+      // Send browser notification
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('转人工已接手', {
-          body: `${tempAgentName} 已接手对话`,
+        new Notification('Handoff Taken Over', {
+          body: `${tempAgentName} has taken over the conversation`,
           icon: '/logo.png'
         });
       }
-      
+
       await fetchHandoffDetail();
     } catch (error) {
-      console.error('接手失败:', error);
-      antMessage.error('接手失败');
+      console.error('Failed to take over:', error);
+      antMessage.error('Failed to take over');
     }
   };
 
-  // 请求通知权限
+  // Request notification permission
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -135,12 +135,12 @@ const HandoffDetail = () => {
       await chatAPI.updateHandoffStatus(handoffId, {
         status: 'completed'
       });
-      
-      antMessage.success('已完成服务');
+
+      antMessage.success('Service completed');
       navigate('/admin/handoffs');
     } catch (error) {
-      console.error('完成失败:', error);
-      antMessage.error('完成失败');
+      console.error('Failed to complete:', error);
+      antMessage.error('Failed to complete');
     }
   };
 
@@ -153,7 +153,7 @@ const HandoffDetail = () => {
   }
 
   if (!handoff) {
-    return <Empty description="转人工记录不存在" />;
+    return <Empty description="Handoff record does not exist" />;
   }
 
   const getSenderIcon = (sender) => {
@@ -169,8 +169,8 @@ const HandoffDetail = () => {
   };
 
   const getSenderText = (sender) => {
-    if (sender === 'customer') return '客户';
-    if (sender === 'human') return '人工';
+    if (sender === 'customer') return 'Customer';
+    if (sender === 'human') return 'Human';
     return 'AI';
   };
 
@@ -181,34 +181,34 @@ const HandoffDetail = () => {
         onClick={() => navigate('/admin/handoffs')}
         style={{ marginBottom: 16 }}
       >
-        返回转人工队列
+        Back to Handoff Queue
       </Button>
 
-      {/* 客户和转接信息 */}
-      <Card title="转接信息" style={{ marginBottom: 24 }}>
+      {/* Customer and Handoff Info */}
+      <Card title="Handoff Information" style={{ marginBottom: 24 }}>
         <Descriptions>
-          <Descriptions.Item label="客户姓名">
+          <Descriptions.Item label="Customer Name">
             <strong>{customer.name}</strong>
           </Descriptions.Item>
-          <Descriptions.Item label="客户邮箱">{customer.email}</Descriptions.Item>
-          <Descriptions.Item label="优先级">
+          <Descriptions.Item label="Customer Email">{customer.email}</Descriptions.Item>
+          <Descriptions.Item label="Priority">
             <Tag color={customer.priority_score >= 4 ? 'red' : 'blue'}>
-              {customer.priority_score} 分
+              {customer.priority_score} Score
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="转接原因">{handoff.trigger_reason}</Descriptions.Item>
-          <Descriptions.Item label="状态">
+          <Descriptions.Item label="Handoff Reason">{handoff.trigger_reason}</Descriptions.Item>
+          <Descriptions.Item label="Status">
             <Tag color={handoff.status === 'completed' ? 'green' : 'orange'}>
               {handoff.status}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="接手人">{handoff.agent_name || '-'}</Descriptions.Item>
+          <Descriptions.Item label="Agent Name">{handoff.agent_name || '-'}</Descriptions.Item>
         </Descriptions>
       </Card>
 
-      {/* 对话历史 */}
+      {/* Conversation History */}
       <Card
-        title="对话历史"
+        title="Conversation History"
         extra={
           <Space>
             {handoff.status === 'pending' && (
@@ -217,7 +217,7 @@ const HandoffDetail = () => {
                 icon={<PlayCircleOutlined />}
                 onClick={showTakeoverModal}
               >
-                接手对话
+                Take Over Conversation
               </Button>
             )}
             {handoff.status === 'processing' && (
@@ -226,14 +226,14 @@ const HandoffDetail = () => {
                 icon={<CheckCircleOutlined />}
                 onClick={handleComplete}
               >
-                完成服务
+                Complete Service
               </Button>
             )}
           </Space>
         }
       >
         {conversations.length === 0 ? (
-          <Empty description="暂无对话记录" />
+          <Empty description="No conversation history yet" />
         ) : (
           conversations.map((conversation) => (
             <div key={conversation.id} style={{ marginBottom: 32 }}>
@@ -250,10 +250,10 @@ const HandoffDetail = () => {
                           {getSenderText(message.sender.toLowerCase())}
                         </Tag>
                         <span className={styles.messageTime}>
-                          {formatUTCDateTimeCN(message.created_at)}
+                          {message.created_at}
                         </span>
                         {message.ai_confidence !== undefined && (
-                          <Tag>置信度: {(message.ai_confidence * 100).toFixed(0)}%</Tag>
+                          <Tag>Confidence: {(message.ai_confidence * 100).toFixed(0)}%</Tag>
                         )}
                       </div>
                       <div className={styles.messageContent}>
@@ -272,16 +272,16 @@ const HandoffDetail = () => {
         )}
       </Card>
 
-      {/* 人工回复面板 */}
+      {/* Human Reply Panel */}
       {handoff.status !== 'completed' && (
         <>
           <Divider />
-          <Card title="人工回复" size="small">
+          <Card title="Human Reply" size="small">
             <Space direction="vertical" style={{ width: '100%' }}>
               <TextArea
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="输入您的回复..."
+                placeholder="Enter your reply..."
                 rows={4}
                 disabled={sending}
               />
@@ -293,7 +293,7 @@ const HandoffDetail = () => {
                   loading={sending}
                   disabled={!replyContent.trim()}
                 >
-                  发送回复
+                  Send Reply
                 </Button>
               </div>
             </Space>
@@ -301,17 +301,17 @@ const HandoffDetail = () => {
         </>
       )}
 
-      {/* 接手对话弹窗 */}
+      {/* Take Over Modal */}
       <Modal
-        title="接手对话"
+        title="Take Over Conversation"
         open={takeoverModalVisible}
         onOk={handleTakeOver}
         onCancel={() => setTakeoverModalVisible(false)}
-        okText="确认接手"
-        cancelText="取消"
+        okText="Confirm Take Over"
+        cancelText="Cancel"
       >
         <Input
-          placeholder="请输入您的姓名"
+          placeholder="Please enter your name"
           value={tempAgentName}
           onChange={(e) => setTempAgentName(e.target.value)}
           onPressEnter={handleTakeOver}

@@ -12,7 +12,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 客户端页面 */
+/* Customer Page */
 /*
 
 .customer-page {
@@ -38,7 +38,7 @@ body {
 }
 */
 
-/* 管理后台布局 */
+/* Admin Dashboard Layout */
 /*
 .admin-layout {
   min-height: 100vh;
@@ -60,7 +60,7 @@ body {
 
 */
 
-/* 响应式 */
+/* Responsive Design */
 /*
 @media (max-width: 768px) {
   .hero-section h1 {

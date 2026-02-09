@@ -1,6 +1,6 @@
 # """
-# 人工转接模块 (Module 6)
-# 处理AI到人工客服的转接逻辑
+# Handoff Module (Module 6)
+# Handles the logic for handing off from AI to a human agent
 # """
 # from services.llm_service import get_llm_service
 # from models import Handoff, Conversation, Message
@@ -11,22 +11,22 @@
 # logger = logging.getLogger(__name__)
 
 # class HandoffManager:
-#     """人工转接管理器"""
+#     """Handoff Manager"""
     
 #     def __init__(self):
 #         self.llm = get_llm_service()
     
 #     def create_handoff(self, db: Session, conversation_id: int, reason: str) -> int:
 #         """
-#         创建转接记录
+#         Create handoff record
         
 #         Args:
-#             db: 数据库会话
-#             conversation_id: 会话ID
-#             reason: 转接原因
+#             db: Database session
+#             conversation_id: Conversation ID
+#             reason: Reason for handoff
             
 #         Returns:
-#             转接记录ID
+#             Handoff record ID
 #         """
 #         handoff = Handoff(
 #             conversation_id=conversation_id,
@@ -42,51 +42,51 @@
         
 #         db.commit()
         
-#         logger.info(f"创建转接记录: 会话{conversation_id}, 原因:{reason}")
+#         logger.info(f"Created handoff record: Conversation {conversation_id}, Reason: {reason}")
 #         return handoff.id
     
 #     def generate_summary(self, db: Session, conversation_id: int) -> str:
 #         """
-#         生成对话摘要（给人工销售看）
+#         Generate conversation summary (for human salesperson)
         
 #         Args:
-#             db: 数据库会话
-#             conversation_id: 会话ID
+#             db: Database session
+#             conversation_id: Conversation ID
             
 #         Returns:
-#             对话摘要
+#             Conversation summary
 #         """
-#         # 1. 获取对话记录
+#         # 1. Retrieve conversation history
 #         messages = db.query(Message).filter(
 #             Message.conversation_id == conversation_id
 #         ).order_by(Message.created_at).all()
         
 #         if not messages:
-#             return "暂无对话记录"
+#             return "No conversation history"
         
-#         # 2. 格式化对话
+#         # 2. Format conversation
 #         conversation_text = "\n".join([
 #             f"{msg.sender.value}: {msg.content}"
 #             for msg in messages
 #         ])
         
-#         # 3. 使用LLM生成摘要
-#         prompt = f"""为人工销售生成对话摘要：
+#         # 3. Use LLM to generate summary
+#         prompt = f"""Generate conversation summary for human salesperson:
 
 # {conversation_text}
 
-# 请提供：
-# 1. 客户核心需求（1句话）
-# 2. 提及的产品型号
-# 3. 当前进展
-# 4. 待解决问题
-# 5. 建议的下一步行动
+# Please provide:
+# 1. Core customer needs (1 sentence)
+# 2. Product models mentioned
+# 3. Current progress
+# 4. Issues to be resolved
+# 5. Suggested next actions
 
-# 摘要："""
+# Summary:"""
         
 #         summary = self.llm.generate(prompt, temperature=0.3)
         
-#         # 4. 保存摘要
+#         # 4. Save summary
 #         conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
 #         if conversation:
 #             conversation.summary = summary
@@ -94,11 +94,11 @@
         
 #         return summary
 
-# # 全局单例
+# # Global singleton
 # _handoff_manager = None
 
 # def get_handoff_manager() -> HandoffManager:
-#     """获取转接管理器实例（单例）"""
+#     """Get handoff manager instance (singleton)"""
 #     global _handoff_manager
 #     if _handoff_manager is None:
 #         _handoff_manager = HandoffManager()

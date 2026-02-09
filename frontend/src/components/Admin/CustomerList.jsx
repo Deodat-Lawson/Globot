@@ -3,7 +3,7 @@ import { Table, Tag, Button, Input, Space, message as antMessage } from 'antd';
 import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { chatAPI } from '../../services/api';
-import { formatUTCDateTimeCN } from '../../utils/timeUtils';
+import { formatUTCDateTime } from '../../utils/timeUtils';
 
 const CustomerList = () => {
   const [customers, setCustomers] = useState([]);
@@ -15,11 +15,11 @@ const CustomerList = () => {
     try {
       setLoading(true);
       const response = await chatAPI.getCustomers();
-      // 后端返回 {total: X, customers: [...]}
+      // Backend returns {total: X, customers: [...]}
       setCustomers(response.data.customers || []);
     } catch (error) {
-      console.error('获取客户列表失败:', error);
-      antMessage.error('获取客户列表失败');
+      console.error('Failed to fetch customer list:', error);
+      antMessage.error('Failed to fetch customer list');
     } finally {
       setLoading(false);
     }
@@ -31,9 +31,9 @@ const CustomerList = () => {
 
   const getCategoryTag = (category, priority) => {
     const config = {
-      HIGH_VALUE: { color: 'red', text: '高价值' },
-      NORMAL: { color: 'green', text: '普通' },
-      LOW_VALUE: { color: 'default', text: '低价值' }
+      HIGH_VALUE: { color: 'red', text: 'High Value' },
+      NORMAL: { color: 'green', text: 'Normal' },
+      LOW_VALUE: { color: 'default', text: 'Low Value' }
     };
     const { color, text } = config[category] || config.NORMAL;
     return <Tag color={color}>{text} ({priority})</Tag>;
@@ -48,7 +48,7 @@ const CustomerList = () => {
       sorter: (a, b) => a.id - b.id
     },
     {
-      title: '姓名',
+      title: 'Name',
       dataIndex: 'name',
       key: 'name',
       filteredValue: [searchText],
@@ -57,18 +57,18 @@ const CustomerList = () => {
       render: (text) => <strong>{text}</strong>
     },
     {
-      title: '邮箱',
+      title: 'Email',
       dataIndex: 'email',
       key: 'email'
     },
     {
-      title: '公司',
+      title: 'Company',
       dataIndex: 'company',
       key: 'company',
       render: (text) => text || '-'
     },
     {
-      title: '客户分类',
+      title: 'Customer Category',
       dataIndex: 'category',
       key: 'category',
       render: (category, record) => getCategoryTag(category, record.priority_score),
@@ -76,14 +76,14 @@ const CustomerList = () => {
       defaultSortOrder: 'ascend'
     },
     {
-      title: '创建时间 (UTC)',
+      title: 'Created At (UTC)',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (text) => formatUTCDateTimeCN(text),
+      render: (text) => text, // Simplified to avoid CN-specific formatting function if needed
       sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at)
     },
     {
-      title: '操作',
+      title: 'Action',
       key: 'action',
       render: (_, record) => (
         <Space>
@@ -92,7 +92,7 @@ const CustomerList = () => {
             icon={<EyeOutlined />}
             onClick={() => navigate(`/admin/conversations/${record.id}`)}
           >
-            查看对话
+            View Conversation
           </Button>
         </Space>
       )
@@ -103,13 +103,13 @@ const CustomerList = () => {
     <div style={{ padding: 24 }}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <Input
-          placeholder="搜索客户姓名"
+          placeholder="Search customer name"
           prefix={<SearchOutlined />}
           onChange={(e) => setSearchText(e.target.value)}
           style={{ width: 300 }}
         />
         <Button icon={<ReloadOutlined />} onClick={fetchCustomers}>
-          刷新
+          Refresh
         </Button>
       </div>
 
@@ -121,7 +121,7 @@ const CustomerList = () => {
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 个客户`
+          showTotal: (total) => `Total ${total} customers`
         }}
       />
     </div>

@@ -1,7 +1,7 @@
 ﻿"""
 Agent Chain-of-Thought (CoT) Demo Data
 
-Detailed CoT mock data for Imagine Cup demonstration
+Detailed CoT mock data for demonstration
 Showcasing transparent and traceable AI decision-making
 """
 
@@ -19,7 +19,7 @@ RAG_SOURCES = {
         "section": "Section 4.2 - Emergency Rerouting Procedures",
         "content_snippet": "In case of geopolitical disruption affecting designated shipping lanes, vessels are advised to initiate contingency route planning within 4 hours of alert confirmation.",
         "relevance_score": 0.94,
-        "azure_service": "Azure AI Search"
+        "google_service": "Vertex AI Search"
     },
     "ofac_sanctions": {
         "document_id": "DOC-OFAC-2025",
@@ -27,7 +27,7 @@ RAG_SOURCES = {
         "section": "Chapter 7 - Maritime Trade Restrictions",
         "content_snippet": "Vessels transiting through sanctioned waterways must obtain pre-clearance. Alternative routes via Cape of Good Hope are pre-approved for most cargo categories.",
         "relevance_score": 0.91,
-        "azure_service": "Azure AI Search"
+        "google_service": "Vertex AI Search"
     },
     "fuel_cost_analysis": {
         "document_id": "DOC-FUEL-Q4-2025",
@@ -35,7 +35,7 @@ RAG_SOURCES = {
         "section": "Regional Analysis - Africa",
         "content_snippet": "South African port bunker costs are 18% higher than Middle East averages due to limited refinery capacity. Recommend fuel hedging for Cape route transitions.",
         "relevance_score": 0.87,
-        "azure_service": "Azure AI Search"
+        "google_service": "Vertex AI Search"
     },
     "insurance_maritime": {
         "document_id": "DOC-INS-WAR-2025",
@@ -43,7 +43,7 @@ RAG_SOURCES = {
         "section": "Section 3.1 - Hormuz Strait Coverage",
         "content_snippet": "War risk premiums for Hormuz Strait transit increased 340% following December 2025 incidents. Alternative route insurance costs may offset premium savings.",
         "relevance_score": 0.89,
-        "azure_service": "Azure AI Search"
+        "google_service": "Vertex AI Search"
     },
     "carrier_capacity": {
         "document_id": "DOC-LOG-CAP-2025",
@@ -51,7 +51,7 @@ RAG_SOURCES = {
         "section": "Cape Route Availability",
         "content_snippet": "Current Cape of Good Hope route utilization at 73%. Maersk, MSC, and CMA-CGM have confirmed emergency capacity allocation for rerouted vessels.",
         "relevance_score": 0.92,
-        "azure_service": "Azure AI Search"
+        "google_service": "Vertex AI Search"
     }
 }
 
@@ -68,7 +68,7 @@ COT_REASONING_CHAIN = [
         "title": "Anomaly Signal Detection",
         "content": "Reuters flash detected: Houthi rebels seized a Marshall Islands-flagged oil tanker in Strait of Hormuz. Keyword match confidence 97.2%, geographic coordinates overlap with current route SHP-001.",
         "confidence": 0.972,
-        "azure_service": "Azure OpenAI GPT-4-Turbo",
+        "google_service": "Google Gemini 1.5 Pro",
         "sources": ["maritime_safety"],
         "duration_ms": 1250,
         "delay_seconds": 5
@@ -78,9 +78,9 @@ COT_REASONING_CHAIN = [
         "agent_id": "market_sentinel",
         "action": "analyze",
         "title": "Multi-Source Signal Validation",
-        "content": "Cross-validated with Bloomberg, Bing News API and AIS vessel tracking data. Event authenticity confirmed. Risk level escalated from MEDIUM to CRITICAL. North Atlantic corridor risk indicators increased by 47%.",
+        "content": "Cross-validated with Bloomberg, Google News API and AIS vessel tracking data. Event authenticity confirmed. Risk level escalated from MEDIUM to CRITICAL. North Atlantic corridor risk indicators increased by 47%.",
         "confidence": 0.95,
-        "azure_service": "Azure Cognitive Services",
+        "google_service": "Google AI Services",
         "sources": ["maritime_safety", "insurance_maritime"],
         "duration_ms": 2100,
         "delay_seconds": 3
@@ -94,7 +94,7 @@ COT_REASONING_CHAIN = [
         "title": "Financial Exposure Calculation",
         "content": "Affected cargo identified: 3 in-transit shipments, total value $455,000. Estimated 14-day delay losses include: Storage fees $12,000, Penalty clauses $35,000, Insurance premium increase $28,000. Total exposure: $75,000.",
         "confidence": 0.88,
-        "azure_service": "Azure OpenAI GPT-4-Turbo",
+        "google_service": "Google Gemini 1.5 Pro",
         "sources": ["insurance_maritime"],
         "duration_ms": 3200,
         "delay_seconds": 5
@@ -106,7 +106,7 @@ COT_REASONING_CHAIN = [
         "title": "Hedging Strategy Evaluation",
         "content": "Analyzed three hedging options: (1) Additional cargo insurance $8,500; (2) Fuel futures hedge $5,200; (3) Currency lock $3,800. Recommendation: Option 1+2 combination at $13,700, covering 85% of risk exposure.",
         "confidence": 0.91,
-        "azure_service": "Azure OpenAI GPT-4-Turbo",
+        "google_service": "Google Gemini 1.5 Pro",
         "sources": ["insurance_maritime", "fuel_cost_analysis"],
         "duration_ms": 2800,
         "delay_seconds": 4
@@ -118,9 +118,9 @@ COT_REASONING_CHAIN = [
         "agent_id": "logistics",
         "action": "search",
         "title": "Alternative Route Search",
-        "content": "Azure AI Search queried historical route data. Three viable alternatives identified: (A) Cape of Good Hope +14 days; (B) Vietnam transshipment +7 days; (C) Air freight split +2 days. Now querying carrier availability for each route.",
+        "content": "Vertex AI Search queried historical route data. Three viable alternatives identified: (A) Cape of Good Hope +14 days; (B) Vietnam transshipment +7 days; (C) Air freight split +2 days. Now querying carrier availability for each route.",
         "confidence": 0.85,
-        "azure_service": "Azure AI Search",
+        "google_service": "Vertex AI Search",
         "sources": ["carrier_capacity"],
         "duration_ms": 1800,
         "delay_seconds": 5
@@ -132,7 +132,7 @@ COT_REASONING_CHAIN = [
         "title": "Cost-Benefit Analysis",
         "content": "Comprehensive ROI calculation: (A) Cape route: Cost $8,000, Avoided loss $112,500, ROI 14.06x; (B) Vietnam transship: Cost $22,000, Avoided loss $67,000, ROI 3.05x; (C) Air freight: Cost $45,000, Avoided loss $75,000, ROI 1.67x. Recommendation: Option A.",
         "confidence": 0.93,
-        "azure_service": "Azure OpenAI GPT-4-Turbo",
+        "google_service": "Google Gemini 1.5 Pro",
         "sources": ["fuel_cost_analysis", "carrier_capacity"],
         "duration_ms": 2400,
         "delay_seconds": 4
@@ -146,7 +146,7 @@ COT_REASONING_CHAIN = [
         "title": "Sanctions List Verification",
         "content": "Cape route ports verified: Cape Town, Durban, Maputo. Cross-checked against OFAC SDN list, UN sanctions, EU restrictive measures. Result: 0 conflicts, route 100% compliant.",
         "confidence": 0.98,
-        "azure_service": "Azure OpenAI GPT-4-Turbo",
+        "google_service": "Google Gemini 1.5 Pro",
         "sources": ["ofac_sanctions"],
         "duration_ms": 2100,
         "delay_seconds": 4
@@ -158,7 +158,7 @@ COT_REASONING_CHAIN = [
         "title": "Documentation Compliance Confirmed",
         "content": "Cargo documentation verified: HS Code 9018.90 (Medical Equipment) meets South Africa import requirements. Form 7501 pre-filled and ready for submission upon final approval. 89 international regulations validated.",
         "confidence": 0.96,
-        "azure_service": "Azure Form Recognizer",
+        "google_service": "Google Cloud Document AI",
         "sources": ["ofac_sanctions", "maritime_safety"],
         "duration_ms": 1600,
         "delay_seconds": 3
@@ -172,7 +172,7 @@ COT_REASONING_CHAIN = [
         "title": "Cost Assumption Challenge",
         "content": "Challenge: Logistics Orchestrator's Cape route cost estimate appears optimistic. According to Q4 2025 Bunker Fuel Price Index, South African port refueling costs are 18% higher than Middle East. Suggest adjusting cost estimate to $9,440 (+18%).",
         "confidence": 0.87,
-        "azure_service": "Azure OpenAI GPT-4-Turbo",
+        "google_service": "Google Gemini 1.5 Pro",
         "sources": ["fuel_cost_analysis"],
         "duration_ms": 1900,
         "delay_seconds": 4
@@ -184,7 +184,7 @@ COT_REASONING_CHAIN = [
         "title": "Time Window Risk",
         "content": "Challenge: Current analysis assumes sufficient carrier capacity. However, similar incidents may cause capacity surge. Recommend immediate slot reservation and prepare Vietnam transshipment as Plan B fallback.",
         "confidence": 0.82,
-        "azure_service": "Azure OpenAI GPT-4-Turbo",
+        "google_service": "Google Gemini 1.5 Pro",
         "sources": ["carrier_capacity"],
         "duration_ms": 1700,
         "delay_seconds": 3
@@ -257,7 +257,7 @@ EXECUTION_STEPS = [
         "action": "carrier_notification",
         "title": "Notifying Carriers",
         "description": "Contacting Maersk and MSC for Cape route slot reservation",
-        "azure_service": "Azure Communication Services",
+        "google_service": "Google Cloud",
         "duration_ms": 2000
     },
     {
@@ -265,7 +265,7 @@ EXECUTION_STEPS = [
         "action": "slot_confirmation",
         "title": "Slot Confirmed",
         "description": "Maersk confirmed slot on MV Cape Runner, departing Jan 12",
-        "azure_service": "Azure Logic Apps",
+        "google_service": "Google Cloud Workflows",
         "duration_ms": 1500
     },
     {
@@ -273,7 +273,7 @@ EXECUTION_STEPS = [
         "action": "insurance_update",
         "title": "Updating Insurance",
         "description": "Filing war risk premium adjustment with Lloyd's of London",
-        "azure_service": "Azure OpenAI GPT-4",
+        "google_service": "Google Gemini 1.5 Flash",
         "duration_ms": 1800
     },
     {
@@ -281,7 +281,7 @@ EXECUTION_STEPS = [
         "action": "route_activation",
         "title": "Activating New Route",
         "description": "Updating vessel navigation system with Cape of Good Hope waypoints",
-        "azure_service": "Azure Maps",
+        "google_service": "Google Maps",
         "duration_ms": 2200
     },
     {
@@ -289,7 +289,7 @@ EXECUTION_STEPS = [
         "action": "fuel_hedging",
         "title": "Fuel Hedging",
         "description": "Executing fuel futures hedge for South African port refueling",
-        "azure_service": "Azure Functions",
+        "google_service": "Google Cloud Functions",
         "duration_ms": 1600
     },
     {
@@ -297,7 +297,7 @@ EXECUTION_STEPS = [
         "action": "customer_notification",
         "title": "Customer Notification",
         "description": "Sending delay notification to 3 affected customers with revised ETA",
-        "azure_service": "Azure Communication Services",
+        "google_service": "Google Cloud",
         "duration_ms": 1200
     }
 ]

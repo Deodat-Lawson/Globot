@@ -1,7 +1,8 @@
 ﻿/**
- * RAGSourceCard - RAG鐭ヨ瘑鏉ユ簮寮曠敤鍗＄墖
+ * RAGSourceCard - RAG Knowledge Source Reference Card
  * 
- * 鏄剧ずAgent鎺ㄧ悊鏃跺紩鐢ㄧ殑鐭ヨ瘑搴撴潵婧? * 鏀寔灞曞紑鏌ョ湅璇︾粏鍐呭
+ * Displays the knowledge source referenced during Agent reasoning.
+ * Supports expanding to view detailed content.
  */
 
 import React, { useState } from 'react';
@@ -14,7 +15,7 @@ interface RAGSource {
   section?: string;
   content_snippet?: string;
   relevance_score: number;
-  azure_service: string;
+  google_service: string;
 }
 
 interface RAGSourceCardProps {
@@ -100,10 +101,10 @@ export function RAGSourceCard({ sources, compact = false }: RAGSourceCardProps) 
                     </div>
                   )}
 
-                  {/* Azure service badge */}
+                  {/* Google service badge */}
                   <div className="mt-2 flex items-center gap-1">
                     <span className="text-[9px] text-white/30 bg-[#1a2332] px-1.5 py-0.5 rounded">
-                      {source.azure_service}
+                      {source.google_service}
                     </span>
                   </div>
                 </motion.div>

@@ -1,6 +1,6 @@
 # """
-# 客户分类模块 (Module 2)
-# 基于对话历史自动分类客户为：优质/普通/低价值
+# Customer Classification Module (Module 2)
+# Automatically classifies customers based on conversation history into: high_value/normal/low_value
 # """
 # from services.llm_service import get_llm_service
 # from models import Customer, CustomerCategory
@@ -10,23 +10,23 @@
 # logger = logging.getLogger(__name__)
 
 # class CustomerClassifier:
-#     """客户分类器"""
+#     """Customer Classifier"""
     
 #     def __init__(self):
 #         self.llm = get_llm_service()
     
 #     def classify(self, conversation_history: list) -> dict:
 #         """
-#         分类客户
+#         Classify Customer
         
 #         Args:
-#             conversation_history: 对话历史 [{"sender": "customer", "content": "..."}]
+#             conversation_history: list of messages [{"sender": "customer", "content": "..."}]
             
 #         Returns:
 #             {
 #                 "category": "high_value/normal/low_value",
 #                 "priority_score": 1-5,
-#                 "reason": "分类理由"
+#                 "reason": "Classification reason"
 #             }
 #         """
 #         # 构建提示词
@@ -43,71 +43,71 @@
 #         except Exception as e:
 #             logger.error(f"分类结果解析失败: {e}, 原始响应: {response}")
 #             # 返回默认分类
-#             return {
 #                 "category": CustomerCategory.NORMAL,
 #                 "priority_score": 3,
-#                 "reason": "分类失败，使用默认分类"
+#                 "reason": "Classification failed, using default"
 #             }
     
 #     def _build_classification_prompt(self, conversation_history: list) -> str:
-#         """构建分类提示词"""
+#         """Build classification prompt"""
         
-#         # 格式化对话历史
+#         # Format conversation history
 #         conversation_text = "\n".join([
-#             f"{'客户' if msg['sender'] == 'customer' else 'AI'}: {msg['content']}"
-#             for msg in conversation_history[-10:]  # 最近10条消息
+#             f"{'Customer' if msg['sender'] == 'customer' else 'AI'}: {msg['content']}"
+#             for msg in conversation_history[-10:]  # Last 10 messages
 #         ])
         
-#         prompt = f"""你是一个专业的B2B销售客户分类专家，专注于大疆无人机销售领域。
+#         prompt = f"""You are a professional B2B sales customer classification expert, specializing in DJI drone sales.
 
-# 请基于以下对话记录，判断客户价值等级：
+# Please determine the customer value level based on the following conversation history:
 
-# 对话记录：
+# Conversation History:
 # {conversation_text}
 
-# 分类标准：
+# Classification Criteria:
 
-# 1. **优质客户 (high_value)**：
-#    - 明确提及大额采购需求（>5台或总价>50万元）
-#    - 询问技术细节深入（说明有真实项目需求）
-#    - 决策快（3轮对话内就询问报价、交期、合同）
-#    - 提及具体应用场景（电力巡检、测绘、应急救援等）
+# 1. **High Value (high_value)**:
+#    - Clearly mentions large-scale purchase needs (>5 units or total price > 500,000 RMB)
+#    - In-depth technical questions (indicating real project requirements)
+#    - Fast decision-making (asking for quotes, lead times, contracts within 3 rounds)
+#    - Mentions specific application scenarios (power inspection, mapping, emergency rescue, etc.)
    
-# 2. **普通客户 (normal)**：
-#    - 有购买意向但犹豫不决
-#    - 需求不明确或采购量较小（1-5台）
-#    - 需要多轮沟通才能了解需求
-#    - 价格敏感，反复比价
+# 2. **Normal (normal)**:
+#    - Has purchase intent but is hesitant
+#    - Requirements are not clear or small purchase volume (1-5 units)
+#    - Requires multiple rounds of communication to understand needs
+#    - Price-sensitive, repeated price comparisons
    
-# 3. **低价值客户 (low_value)**：
-#    - 只咨询价格，不关心技术细节
-#    - 只问试飞、免费体验，从不提购买
-#    - 提问肤浅（如"最便宜的多少钱"）
-#    - 行为异常（可能是竞品套信息）
+# 3. **Low Value (low_value)**:
+#    - Only consults on price, doesn't care about technical details
+#    - Only asks about test flights, free trials, never mentions purchasing
+#    - Shallow questions (e.g., "What is the cheapest one?")
+#    - Abnormal behavior (could be competitors fishing for info)
 
-# 请输出JSON格式：
+# Please output in JSON format:
 # ```json
 # {{
 #     "category": "high_value/normal/low_value",
-#     "priority_score": 1到5的整数,
-#     "reason": "用1-2句话说明分类理由，必须引用对话中的具体证据"
+#     "priority_score": Integer from 1 to 5,
+#     "reason": "Explain the classification reason in 1-2 sentences, must cite specific evidence from the conversation"
 # }}
 # ```
 
-# 仅输出JSON，不要其他内容。"""
+# Output ONLY JSON, no other content."""
         
 #         return prompt
     
 #     def _parse_classification_result(self, response: str) -> dict:
-#         """解析分类结果"""
+#         """Parse classification result"""
 #         # 尝试提取JSON
+#         # Attempt to extract JSON
 #         import re
 #         json_match = re.search(r'\{[^{}]*"category"[^{}]*\}', response, re.DOTALL)
         
 #         if json_match:
 #             result = json.loads(json_match.group())
             
-#             # 验证并规范化
+#             # Validate and normalize
 #             category = result.get('category', 'normal')
 #             if category not in ['high_value', 'normal', 'low_value']:
 #                 category = 'normal'
@@ -119,16 +119,16 @@
 #             return {
 #                 'category': CustomerCategory(category),
 #                 'priority_score': priority_score,
-#                 'reason': result.get('reason', '自动分类')
+#                 'reason': result.get('reason', 'Automatic Classification')
 #             }
 #         else:
-#             raise ValueError("无法解析JSON")
+#             raise ValueError("Could not parse JSON")
 
-# # 全局单例
+# # Global singleton
 # _classifier = None
 
 # def get_classifier() -> CustomerClassifier:
-#     """获取分类器实例（单例）"""
+#     """Get classifier instance (singleton)"""
 #     global _classifier
 #     if _classifier is None:
 #         _classifier = CustomerClassifier()

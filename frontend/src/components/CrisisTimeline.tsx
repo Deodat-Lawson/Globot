@@ -24,34 +24,34 @@ interface CrisisTimelineProps {
 
 // Phases 1-4: Events that play before decision approval
 const preExecutionMessages = [
-  // === Phase 1: 平静无事 (Calm operations - Suez Canal route planned) ===
+  // === Phase 1: Calm operations (Suez Canal route planned) ===
   { message: 'Shanghai → Hamburg: Vessel "EVER ALOT" departed Yangshan Deep Water Port', type: 'success' as const },
   { message: 'Cargo manifest validated: 4,200 TEU containers, high-value electronics shipment', type: 'info' as const },
   { message: 'Route: Suez Canal (Red Sea) - shortest path. Transit scheduled Day 18', type: 'success' as const },
   { message: 'Market Sentinel monitoring 156 global risk indicators - all within normal range', type: 'info' as const },
-  { message: 'Azure AI Search indexed 2,847 shipping intelligence reports. No anomalies detected', type: 'info' as const },
+  { message: 'Vertex AI Search indexed 2,847 shipping intelligence reports. No anomalies detected', type: 'info' as const },
   { message: 'Weather forecast: Favorable conditions through Indian Ocean corridor', type: 'success' as const },
   { message: 'Vessel on course via Suez Canal route. ETA Hamburg: 28 days. Status: NOMINAL', type: 'success' as const },
-  
-  // === Phase 2: 预测爆发危机 (Crisis prediction - Suez route at risk) ===
+
+  // === Phase 2: Crisis prediction (Suez route at risk) ===
   { message: '⚡ Market Sentinel: Unusual naval activity detected near Suez Canal / Red Sea region', type: 'info' as const },
-  { message: 'Azure OpenAI analyzing 3,421 intelligence reports from past 72 hours', type: 'info' as const },
+  { message: 'Google Gemini AI analyzing 3,421 intelligence reports from past 72 hours', type: 'info' as const },
   { message: 'Social media sentiment analysis: Geopolitical tension keywords spiking (+340%)', type: 'info' as const },
   { message: '⚠️ Predictive model: 67% probability Suez Canal route disrupted within 5 days', type: 'critical' as const },
   { message: 'Risk Hedger: Suez Canal (Red Sea) route alert level → ELEVATED', type: 'critical' as const },
-  { message: 'Azure Cognitive: Pattern matching 2024 Houthi crisis precedent (87% similarity)', type: 'info' as const },
+  { message: 'Google AI Services: Pattern matching 2024 Houthi crisis precedent (87% similarity)', type: 'info' as const },
   { message: '⚠️ Fleet anomaly: 12 vessels diverted from Suez route in past 6 hours', type: 'critical' as const },
-  
-  // === Phase 3: 生成替代方案 (Generate alternative plans - aligned with Available Routes) ===
+
+  // === Phase 3: Generate alternative plans (aligned with Available Routes) ===
   { message: 'Logistics Orchestrator analyzing 3 alternative routes from Available Routes panel', type: 'info' as const },
   { message: '📍 Cape of Good Hope (Standard): Shanghai → Singapore → Cape Town → Rotterdam → Hamburg', type: 'info' as const },
   { message: '📍 Panama Canal (Westbound): Shanghai → Pacific → Panama → Atlantic → Hamburg (+18 days)', type: 'info' as const },
   { message: '📍 Northern Sea Route (Arctic): REJECTED - Seasonal route impassable in current conditions', type: 'critical' as const },
   { message: 'Adversarial Debate: Cape route optimal - LOW RISK, +12 days, $180K additional fuel cost', type: 'info' as const },
-  { message: 'Azure AI Search: Cape of Good Hope 94% reliability during Red Sea tensions (2015-2024 data)', type: 'success' as const },
+  { message: 'Vertex AI Search: Cape of Good Hope 94% reliability during Red Sea tensions (2015-2024 data)', type: 'success' as const },
   { message: '✅ Route selected: Cape of Good Hope (Standard). Pre-booking Singapore & Cape Town berths', type: 'success' as const },
-  
-  // === Phase 4: 真实危机爆发 (Real crisis outbreak - Suez Canal route compromised) ===
+
+  // === Phase 4: Real crisis outbreak (Suez Canal route compromised) ===
   { message: '🚨 BREAKING: Commercial vessel struck by missile in Bab el-Mandeb Strait', type: 'critical' as const },
   { message: '🚨 Suez Canal (Red Sea) route: Multiple shipping companies suspending transit', type: 'critical' as const },
   { message: '🚨 Suez Canal Authority: All northbound traffic SUSPENDED until further notice', type: 'critical' as const },
@@ -97,19 +97,19 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
       setRiskData((prev) => {
         const newData = [...prev];
         newData.shift(); // Remove first item
-        
+
         // Calculate new risk value with some randomness
         const lastRisk = newData[newData.length - 1].risk;
         const change = (Math.random() - 0.5) * 20;
         const newRisk = Math.max(10, Math.min(95, lastRisk + change));
-        
+
         // Generate new time
         const lastTime = newData[newData.length - 1].time;
         const [hours, minutes] = lastTime.split(':').map(Number);
         const newMinutes = (minutes + 30) % 60;
         const newHours = minutes + 30 >= 60 ? (hours + 1) % 24 : hours;
         const newTime = `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
-        
+
         newData.push({ time: newTime, risk: newRisk });
         return newData;
       });
@@ -134,7 +134,7 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
     const interval = setInterval(() => {
       // Use UTC time for consistency
       const time = formatUTCTimeShort().slice(0, 5); // HH:MM format
-      
+
       const newEvent: TimelineEvent = {
         id: getUTCTimestamp().toString(),
         time: time + ' UTC',
@@ -156,7 +156,7 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
     const interval = setInterval(() => {
       // Use UTC time for consistency
       const time = formatUTCTimeShort().slice(0, 5); // HH:MM format
-      
+
       const newEvent: TimelineEvent = {
         id: `exec-${getUTCTimestamp()}`,
         time: time + ' UTC',
@@ -209,7 +209,7 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
             LIVE: Global Supply Chain Risk Monitor
           </h3>
         </div>
-        
+
         <ResponsiveContainer width="100%" height={120}>
           <LineChart data={riskData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
             <defs>
@@ -278,13 +278,13 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
               </p>
             </div>
           )}
-          
+
           <AnimatePresence>
             {events.map((event) => {
               const Icon = getEventIcon(event.type);
               const color = getEventColor(event.type);
               const isCritical = event.type === 'critical';
-              
+
               return (
                 <motion.div
                   key={event.id}
@@ -303,13 +303,12 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
                     strokeWidth={2}
                   />
                   <span
-                    className={`leading-relaxed ${
-                      isCritical ? 'text-[#c94444] font-medium' : 'text-white/60'
-                    }`}
+                    className={`leading-relaxed ${isCritical ? 'text-[#c94444] font-medium' : 'text-white/60'
+                      }`}
                   >
                     {event.message}
                   </span>
-                  
+
                   {/* Interactive Ship Link if message contains known ship name */}
                   {(() => {
                     const foundShip = MOCK_SHIPS.find(s => event.message.includes(s.name));

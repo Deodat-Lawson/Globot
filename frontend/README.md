@@ -1,8 +1,8 @@
 # DJI Sales AI Assistant - Frontend
 
-前端界面，包含客户聊天 Widget 和管理后台。
+Frontend interface, including customer chat widget and admin dashboard.
 
-## 技术栈
+## Tech Stack
 
 - **React** 18
 - **Ant Design** 5
@@ -10,123 +10,123 @@
 - **React Router** 6
 - **Axios**
 
-## 快速开始
+## Quick Start
 
-### 安装依赖
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 启动开发服务器
+### Start Development Server
 
 ```bash
 npm run dev
 ```
 
-访问: http://localhost:5173
+Visit: http://localhost:5173
 
-### 构建生产版本
+### Build Production Version
 
 ```bash
 npm run build
 ```
 
-## 页面说明
+## Page Description
 
-### 客户端
+### Client Side
 
-- **首页** (`/`) - 包含 Chat Widget 浮动聊天窗口
-- 客户可以直接在网页上与 AI 对话
-
-### 管理后台
-
-- **客户列表** (`/admin/customers`) - 查看所有客户，按优先级排序
-- **对话详情** (`/admin/conversations/:id`) - 查看具体客户的对话历史
-
-## 功能特性
-
-### Chat Widget
-
-- ✅ 浮动聊天按钮
-- ✅ 实时对话
-- ✅ Markdown 渲染
-- ✅ 消息轮询（5 秒）
-- ✅ 响应式设计
+- **Home** (`/`) - Includes the Chat Widget floating chat window
+- Customers can directly chat with AI on the webpage
 
 ### Admin Dashboard
 
-- ✅ 客户列表表格
-- ✅ 搜索和排序
-- ✅ 客户分类标签（高价值/普通/低价值）
-- ✅ 对话历史 Timeline
-- ✅ 置信度显示
+- **Customer List** (`/admin/customers`) - View all customers, sorted by priority
+- **Conversation Details** (`/admin/conversations/:id`) - View specific customer's conversation history
 
-## 配置
+## Features
 
-### 环境变量
+### Chat Widget
 
-创建 `.env` 文件：
+- ✅ Floating chat button
+- ✅ Real-time conversation
+- ✅ Markdown rendering
+- ✅ Message polling (5 seconds)
+- ✅ Responsive design
+
+### Admin Dashboard
+
+- ✅ Customer list table
+- ✅ Search and sort
+- ✅ Customer category tags (High Value / Normal / Low Value)
+- ✅ Conversation history Timeline
+- ✅ Confidence display
+
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000/api
-VITE_WS_URL=ws://localhost:8000/ws  # V1.0使用
+VITE_WS_URL=ws://localhost:8000/ws  # For V1.0 usage
 ```
 
-## 架构特点
+## Architectural Highlights
 
-### 消息服务抽象层
+### Message Service Abstraction Layer
 
-使用适配器模式，便于从 HTTP 轮询升级到 WebSocket：
+Uses the Adapter pattern for easy upgrades from HTTP polling to WebSocket:
 
 ```javascript
-// MVP: HTTP轮询
+// MVP: HTTP Polling
 const messageService = new MessageService(new PollingStrategy());
 
-// V1.0: WebSocket（只需修改1行）
+// V1.0: WebSocket (only requires 1 line change)
 const messageService = new MessageService(new WebSocketStrategy());
 ```
 
-### API 服务层
+### API Service Layer
 
-统一的 API 调用接口，便于管理和测试。
+Unified API invocation interface for easier management and testing.
 
-## 目录结构
+## Directory Structure
 
 ```
 frontend/
 ├── src/
 │   ├── components/
-│   │   ├── ChatWidget/       # 客户聊天组件
-│   │   └── Admin/            # 管理后台组件
+│   │   ├── ChatWidget/       # Customer chat components
+│   │   └── Admin/            # Admin dashboard components
 │   ├── services/
-│   │   ├── api.js            # API调用
-│   │   └── messageService.js # 消息服务抽象
-│   ├── App.jsx               # 主应用
-│   └── main.jsx              # 入口
+│   │   ├── api.js            # API calls
+│   │   └── messageService.js # Message service abstraction
+│   ├── App.jsx               # Main application
+│   └── main.jsx              # Entry point
 ├── package.json
 └── vite.config.js
 ```
 
-## 开发说明
+## Development Notes
 
-### 添加新页面
+### Adding a New Page
 
-1. 在 `src/components` 创建组件
-2. 在 `App.jsx` 添加路由
+1. Create a component in `src/components`
+2. Add a route in `App.jsx`
 
-### 调用 API
+### Calling API
 
 ```javascript
 import { chatAPI } from "./services/api";
 
 const response = await chatAPI.sendMessage({
   customer_id: 1,
-  message: "M30的续航时间？",
+  message: "M30 battery life?",
 });
 ```
 
 ---
 
-**版本**: 1.0.0  
-**状态**: ✅ 开发完成
+**Version**: 1.0.0  
+**Status**: ✅ Development Complete

@@ -2,49 +2,48 @@
 trigger: always_on
 ---
 
-## 基础规范
+## Basic Guidelines
 
-0. 本项目使用 utf-8 编码
-1. 本项目中所有依赖均安装在虚拟环境 globot_env 中
-2. 本项目中 .gitignore 中加入 node_modules、.env（实际项目可加入 .agent）
-3. 本项目全程回复使用中文
+0. This project uses utf-8 encoding
+1. All dependencies in this project are installed in the `globot_env` virtual environment
+2. Add `node_modules` and `.env` (actual projects may add `.agent`) to `.gitignore`
+3. English is used for communication throughout this project
 
-## API 使用规范
+## API Usage Guidelines
 
-4. 如项目需要使用大语言模型，则 API 的存放地址和使用原则从 `.agent/API.md` 文件中获取
-5. 如果你需要的资源如 API key、GitHub 地址等无法找到则遍历 `.agent` 文件夹中所有 .md 文件
+4. If the project requires large language models, obtain API locations and usage principles from the `.agent/API.md` file
+5. If required resources like API keys or GitHub addresses are not found, search all `.md` files in the `.agent` folder
 
-## 项目关联
+## Project Affiliation
 
-6. 本项目中关联的唯一 GitHub 仓库为 https://github.com/Vector897/Globot
+6. The only GitHub repository associated with this project is https://github.com/Vector897/Globot
 
-## 开发环境
+## Development Environment
 
-7. 我已在本地安装了 Ollama、Docker
-8. 始终使用中文与我交流
+7. I have Ollama and Docker installed locally
+8. Always communicate with me in English
 
-## 项目说明（按需填写）
+## Project Description (Fill as needed)
 
-# 9. Background.txt 中包含了项目的背景介绍
+# 9. Background.txt contains the project background information
 
-# 10. 文件夹 Project_Info 中存放着产品信息
+# 10. The Project_Info folder contains product information
 
-# 11. 文件夹 Process_Documents 中存放着项目开发的过程文档
+# 11. The Process_Documents folder contains project development process documents
 
-# 12. 启动项目是自动运行虚拟环境
+# 12. Starting the project automatically runs the virtual environment
 
-## “渐进式披露”（Progressive Disclosure）
-You have access to specialized knowledge modules. Do NOT rely on internal training for these topics; strictly READ the corresponding skill file first if the task involves:
+## Progressive Disclosures. Do NOT rely on internal training for these topics; strictly READ the corresponding skill file first if the task involves:
 - ROS 2 Navigation: read `.agent/skills/ros_navigation.md`
 - Academic Writing: read `.agent/skills/paper_writing.md`
 
 [Strategy]
 Check user request -> Identify required skill -> Read skill file -> Execute task.
 
-## 此项目是2026年 GEMINI 3 黑客马拉松的参赛项目，一切要求以此比赛要求为准
+## This project is for the 2026 GEMINI 3 Hackathon, and all requirements are based on the competition guidelines.
 
-## 参考文档
+## Reference Documents
 
-- 项目结构说明：`.agent/project-structure.md`
-- 技术栈说明：`.agent/tech-stack.md`
-- API 规范：`.agent/API.md`
+- Project Structure Description: `.agent/project-structure.md`
+- Technology Stack Description: `.agent/tech-stack.md`
+- API Guidelines: `.agent/API.md`

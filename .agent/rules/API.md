@@ -2,27 +2,27 @@
 trigger: always_on
 ---
 
-# 大模型的 API_Keys 调用安全规范
+# AI Model API Keys Security Guidelines
 
-## 密钥存储位置
+## Key Storage Locations
 
-- Gemini 密钥：已存储在 `GEMINI_API_KEY` 环境变量
+- Gemini Key: Stored in `GEMINI_API_KEY` environment variable
 
-## 代码要求
+## Code Requirements
 
-1. **绝对禁止**硬编码密钥
-2. **必须**使用 `os.getenv()` 或类似方法读取环境变量
-3. **必须**包含密钥验证代码（如检查是否为 None）
-4. **建议**使用配置类或函数封装 API 调用
+1. **Strictly Forbidden** to hardcode keys
+2. **Must** use `os.getenv()` or similar methods to read environment variables
+3. **Must** include key validation code (e.g., check for None)
+4. **Recommended** to use configuration classes or functions to encapsulate API calls
 
-## 错误处理
+## Error Handling
 
-- 如果密钥不存在，应给出明确提示
-- 不要在生产代码中暴露任何密钥相关信息
+- If the key doesn't exist, provide a clear prompt
+- Do not expose any key-related information in production code
 
-## 示例结构
+## Example Structure
 
-请按照以下模式编写代码：
+Follow this pattern when writing code:
 
 ```python
 import os
@@ -30,21 +30,21 @@ import os
 def get_api_key(service_name):
     key = os.getenv(f"{service_name.upper()}_API_KEY")
     if not key:
-        raise ValueError(f"请在环境变量中设置{service_name.upper()}_API_KEY")
+        raise ValueError(f"Please set {service_name.upper()}_API_KEY in environment variables")
     return key
 
 ```
 
 #
 
-## 🛡️ **多层防护策略**
+## 🛡️ **Multi-layer Defense Strategy**
 
-除了提示词，还应该实施这些防护：
+In addition to prompts, implement these protections:
 
-### **1. 代码层面防护**
+### **1. Code-Level Protection**
 
 ```python
-# safe_api.py - 安全封装示例
+# safe_api.py - Security encapsulation example
 import os
 import hashlib
 
@@ -54,27 +54,27 @@ class SecureAPIClient:
         self.api_key = self._load_key()
 
     def _load_key(self):
-        """安全加载API密钥"""
+        """Safely load API keys"""
         env_var = f"{self.service_name.upper()}_API_KEY"
         key = os.getenv(env_var)
 
         if not key:
             raise ValueError(
-                f"请设置环境变量 {env_var}\n"
-                f"例如：export {env_var}='your-key-here'"
+                f"Please set environment variable {env_var}\n"
+                f"For example: export {env_var}='your-key-here'"
             )
 
         # 记录密钥哈希（用于日志，不暴露密钥）
         key_hash = hashlib.sha256(key.encode()).hexdigest()[:8]
-        print(f"[安全提示] 已加载{self.service_name} API密钥（哈希: ...{key_hash}）")
+        print(f"[Security Note] Loaded {self.service_name} API key (hash: ...{key_hash})")
         return key
 
 ```
 
-### **2. 建立环境变量检查脚本**
+### **2. Establish Environment Variable Check Script**
 
 ```python
-# check_env.py - 环境变量安全检查
+# check_env.py - Environment variable security check
 import os
 
 REQUIRED_KEYS = ['GEMINI_API_KEY']
@@ -86,14 +86,14 @@ def check_environment():
             missing.append(key)
 
     if missing:
-        print("❌ 缺少以下环境变量：")
+        print("❌ Missing the following environment variables:")
         for key in missing:
             print(f"   - {key}")
-        print("\n💡 设置方法：")
+        print("\n💡 Setup method:")
         print(f"   export {missing[0]}='your-key-here'")
         return False
 
-    print("✅ 所有API密钥配置正常（安全存储在环境变量中）")
+    print("✅ All API keys configured correctly (securely stored in environment variables)")
     return True
 
 if __name__ == "__main__":
@@ -101,9 +101,9 @@ if __name__ == "__main__":
 
 ```
 
-### **3. API Key 存在性检查**
+### **3. API Key Existence Check**
 
-做 API Key 存在性检查：
+Perform API Key existence check:
 
 ```python
 print("API key loaded:", bool(os.getenv("GEMINI_API_KEY")))

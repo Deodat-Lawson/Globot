@@ -1,16 +1,20 @@
 ﻿/**
- * ReasoningStep - 鍗曟鎺ㄧ悊鍙鍖栫粍浠? * 
- * 灞曠ずAgent鐨勫崟涓帹鐞嗘楠わ紝鍖呭惈锛? * - Agent鍥炬爣鍜岀姸鎬? * - 鎺ㄧ悊鍐呭锛堟墦瀛楁満鏁堟灉锛? * - 缃俊搴﹀拰鎵ц鏃堕暱
- * - 鍙睍寮€鐨凴AG鏉ユ簮
+ * ReasoningStep - Single-step reasoning visualization component
+ * 
+ * Displays a single reasoning step from an agent, including:
+ * - Agent icon and status
+ * - Reasoning content (with typewriter effect)
+ * - Confidence score and execution duration
+ * - Expandable RAG sources
  */
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { 
-  AlertTriangle, 
-  TrendingUp, 
-  Package, 
-  Shield, 
+import {
+  AlertTriangle,
+  TrendingUp,
+  Package,
+  Shield,
   GitBranch,
   Clock,
   Zap,
@@ -18,7 +22,7 @@ import {
 } from 'lucide-react';
 import { RAGSourceCard } from './RAGSourceCard';
 
-// Agent閰嶇疆
+// Agent Configuration
 const AGENT_CONFIG: Record<string, { icon: LucideIcon; color: string; name: string }> = {
   market_sentinel: { icon: AlertTriangle, color: '#c94444', name: 'Market Sentinel' },
   risk_hedger: { icon: TrendingUp, color: '#c9a227', name: 'Risk Hedger' },
@@ -27,7 +31,7 @@ const AGENT_CONFIG: Record<string, { icon: LucideIcon; color: string; name: stri
   adversarial: { icon: GitBranch, color: '#9b59b6', name: 'Adversarial Debate' },
 };
 
-// 鍔ㄤ綔绫诲瀷缈昏瘧
+// Action Label Mappings
 const ACTION_LABELS: Record<string, string> = {
   detect: 'DETECTING',
   analyze: 'ANALYZING',
@@ -44,17 +48,17 @@ interface RAGSource {
   section?: string;
   content_snippet?: string;
   relevance_score: number;
-  azure_service: string;
+  google_service: string;
 }
 
 interface ReasoningStepProps {
   stepId: string;
-  agentId: string;
+  agent_id: string; // backend uses agent_id
   action: string;
   title: string;
   content: string;
   confidence: number;
-  azureService: string;
+  googleService: string;
   sources?: RAGSource[];
   durationMs?: number;
   isActive?: boolean;
@@ -64,12 +68,12 @@ interface ReasoningStepProps {
 
 export function ReasoningStep({
   stepId,
-  agentId,
+  agent_id,
   action,
   title,
   content,
   confidence,
-  azureService,
+  googleService,
   sources = [],
   durationMs = 0,
   isActive = false,
@@ -77,17 +81,17 @@ export function ReasoningStep({
   showTypewriter = false,
 }: ReasoningStepProps) {
   const [displayedContent, setDisplayedContent] = useState(showTypewriter ? '' : content);
-  
-  const agentConfig = AGENT_CONFIG[agentId] || AGENT_CONFIG.market_sentinel;
+
+  const agentConfig = AGENT_CONFIG[agent_id] || AGENT_CONFIG.market_sentinel;
   const Icon = agentConfig.icon;
-  
+
   // Typewriter effect
   useEffect(() => {
     if (!showTypewriter || !isActive) {
       if (!showTypewriter) setDisplayedContent(content);
       return;
     }
-    
+
     let animationFrameId: number;
     let startTime: number | null = null;
     const charDelay = 30; // 30ms per character
@@ -106,7 +110,7 @@ export function ReasoningStep({
     };
 
     animationFrameId = requestAnimationFrame(animate);
-    
+
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
@@ -125,13 +129,12 @@ export function ReasoningStep({
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className={`relative bg-[#0f1621] border rounded-sm p-4 overflow-hidden ${
-        isActive 
-          ? 'border-[#4a90e2]/50 shadow-lg shadow-[#4a90e2]/10' 
-          : isComplete 
-            ? 'border-[#5a9a7a]/30' 
-            : 'border-[#1a2332]'
-      }`}
+      className={`relative bg-[#0f1621] border rounded-sm p-4 overflow-hidden ${isActive
+        ? 'border-[#4a90e2]/50 shadow-lg shadow-[#4a90e2]/10'
+        : isComplete
+          ? 'border-[#5a9a7a]/30'
+          : 'border-[#1a2332]'
+        }`}
     >
       {/* Active indicator glow */}
       {isActive && (
@@ -206,7 +209,7 @@ export function ReasoningStep({
                 {(confidence * 100).toFixed(0)}%
               </span>
             </div>
-            
+
             {/* Duration */}
             {durationMs > 0 && (
               <div className="flex items-center gap-1 text-white/30">
@@ -216,10 +219,10 @@ export function ReasoningStep({
             )}
           </div>
 
-          {/* Azure service badge */}
+          {/* Google service badge */}
           <div className="flex items-center gap-1 text-white/30 bg-[#1a2332] px-2 py-1 rounded-sm">
-            <Zap className="w-3 h-3 text-[#0078d4]" />
-            <span className="text-[9px]">{azureService}</span>
+            <Zap className="w-3 h-3 text-[#4285F4]" />
+            <span className="text-[9px]">{googleService}</span>
           </div>
         </div>
 

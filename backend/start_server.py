@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-后端服务启动脚本
+Backend service startup script
 """
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'

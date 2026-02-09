@@ -10,7 +10,7 @@ const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 const COUNTRIES_URL = 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson';
 
 // Ship arrow icon as SVG data URL
-// 船舶箭头图标 SVG 数据 URL
+// Ship arrow icon SVG data URL
 const SHIP_ARROW_ICON = {
   url: 'data:image/svg+xml;base64,' + btoa(`
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
@@ -33,7 +33,7 @@ const SHIP_ICON_MAPPING = {
 // --- Helper for Path Interpolation ---
 const getPositionAlongPath = (path: [number, number][], progress: number): [number, number, number] | null => {
   if (!path || path.length < 2) return null;
-  
+
   const totalSegments = path.length - 1;
   const exactSegment = progress * totalSegments;
   const segmentIndex = Math.min(Math.floor(exactSegment), totalSegments - 1);
@@ -60,28 +60,28 @@ const RouteLegend = () => (
       <div className="w-5 h-5 rounded-full bg-[#1a2332] flex items-center justify-center">
         <span className="text-[10px]">✈</span>
       </div>
-      <span className="text-xs text-white/60 uppercase tracking-wider font-medium">航线图例</span>
+      <span className="text-xs text-white/60 uppercase tracking-wider font-medium">Route Legend</span>
       <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse ml-auto" />
     </div>
-    
+
     <div className="space-y-2 text-[11px]">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-0.5 bg-red-500" />
         </div>
-        <span className="text-white/70">高风险航线</span>
+        <span className="text-white/70">High Risk Route</span>
       </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-0.5 bg-amber-500" />
         </div>
-        <span className="text-white/70">备选航线</span>
+        <span className="text-white/70">Alternative Route</span>
       </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-0.5 bg-emerald-500" />
         </div>
-        <span className="text-white/70">安全航线</span>
+        <span className="text-white/70">Safe Route</span>
       </div>
     </div>
   </div>
@@ -199,21 +199,21 @@ export function GlobalMap2DDeck({
       return;
     }
 
-    const newShips = MOCK_SHIPS.filter(ship => 
-      routes.some(r => r.id === ship.routeId) || 
+    const newShips = MOCK_SHIPS.filter(ship =>
+      routes.some(r => r.id === ship.routeId) ||
       (ship.routeId.startsWith('fixed-') && routes.length > 0)
     ).map(ship => {
       const route = routes.find(r => r.id === ship.routeId) || routes[0];
-      
+
       const loopTime = 60000;
       const offset = (ship.id.charCodeAt(ship.id.length - 1) * 1000);
       const now = Date.now();
       let progress = ((now + offset) % loopTime) / loopTime;
-      
+
       if (ship.direction === -1) progress = 1 - progress;
 
       const posData = getPositionAlongPath(route.waypoints, progress);
-      
+
       if (posData) {
         return {
           ...ship,
@@ -269,7 +269,7 @@ export function GlobalMap2DDeck({
     routes.forEach((route, index) => {
       const isSelected = route.id === selectedRouteId;
       const color = getRouteColor(route, isSelected);
-      
+
       layerList.push(
         new PathLayer({
           id: `route-${route.id}`,
@@ -344,7 +344,7 @@ export function GlobalMap2DDeck({
     }
 
     // 4. Ships as directional arrows
-    // 船舶显示为带方向的箭头
+    // Ships displayed as directional arrows
     if (activeShips.length > 0) {
       // Ship arrow icons with rotation based on heading
       layerList.push(
@@ -356,7 +356,7 @@ export function GlobalMap2DDeck({
           getSize: 28,
           sizeMinPixels: 16,
           sizeMaxPixels: 40,
-          // Rotate arrow based on ship heading (航向)
+          // Rotate arrow based on ship heading (heading)
           getAngle: (d: any) => -(d.heading || 0), // Negative because deck.gl rotates clockwise
           getColor: (d: any) => {
             if (d.status === 'At Risk') return [239, 68, 68, 255];     // Red
@@ -426,7 +426,7 @@ export function GlobalMap2DDeck({
     if (customMarkers.length > 0) {
       // Marker circles with pulse effect
       const pulseSize = 1 + Math.sin(pulsePhase * Math.PI * 2) * 0.3;
-      
+
       layerList.push(
         new ScatterplotLayer({
           id: 'custom-markers-pulse',
@@ -533,7 +533,7 @@ export function GlobalMap2DDeck({
 
       {/* DeckGL Map with infinite scroll */}
       <DeckGL
-        views={new MapView({ 
+        views={new MapView({
           repeat: true,  // Enable infinite horizontal scroll!
           controller: true
         })}
@@ -549,7 +549,7 @@ export function GlobalMap2DDeck({
           touchRotate: false,
           keyboard: true,
         }}
-        getCursor={({ isDragging, isHovering }) => 
+        getCursor={({ isDragging, isHovering }) =>
           isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab'
         }
         style={{ position: 'absolute', inset: '0' }}
@@ -558,7 +558,7 @@ export function GlobalMap2DDeck({
       {/* HUD Info */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-[#0f1621]/95 border border-[#1a2332] rounded-sm backdrop-blur-sm pointer-events-none z-10">
         <span className="text-[10px] text-white/40 font-mono tracking-wider uppercase">
-          Zoom: {viewState.zoom.toFixed(1)}x | 无限滚动: ✓
+          Zoom: {viewState.zoom.toFixed(1)}x | Infinite Scroll: ✓
         </span>
       </div>
 

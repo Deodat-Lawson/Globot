@@ -46,10 +46,8 @@
   overflow-x: auto;
 }
 
-/* 人工消息特殊样式 */
+/* Special style for human messages */
 .humanMessage {
   background: #f0e6ff;
   border-left: 3px solid #722ed1;
 }
-
-

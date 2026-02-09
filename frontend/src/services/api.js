@@ -9,30 +9,30 @@ const api = axios.create({
   }
 });
 
-// API服务
+// API Service
 export const chatAPI = {
-  // 创建客户
+  // Create Customer
   createCustomer: (data) => api.post('/customers', data),
-  
-  // 发送消息
+
+  // Send Message
   sendMessage: (data) => api.post('/chat', data),
-  
-  // 获取客户列表
+
+  // Get Customer List
   getCustomers: (params) => api.get('/customers', { params }),
-  
-  // 获取对话历史
+
+  // Get Conversation History
   getConversations: (customerId) => api.get(`/conversations/${customerId}`),
-  
-  // 获取单个对话（通过conversation_id）
+
+  // Get Single Conversation (via conversation_id)
   getConversation: (conversationId) => api.get(`/conversation/${conversationId}`),
-  
-  // 客户分类
+
+  // Customer Classification
   classifyCustomer: (customerId) => api.post(`/classify/${customerId}`),
-  
-  // 记录转人工
+
+  // Record Handoff
   recordHandoff: (data) => api.post('/handoff', data),
-  
-  // 转人工管理
+
+  // Handoff Management
   getHandoffs: (params) => api.get('/handoffs', { params }),
   sendHumanMessage: (data) => api.post('/messages/human', data),
   updateHandoffStatus: (handoffId, data) => api.put(`/handoffs/${handoffId}/status`, data)

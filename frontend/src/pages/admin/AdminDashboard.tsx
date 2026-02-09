@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Tag, Space, Typography, Card, Statistic, Row, Col, Spin, message, Tooltip as AntTooltip } from 'antd';
 import { useAuth, useUser } from '@clerk/clerk-react';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
@@ -13,10 +13,10 @@ const COLORS = ['#1890ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1'];
 
 // Mock Data fallbacks
 const MOCK_CATEGORIES = [
-  { name: '优质客户 (VIP)', value: 45 },
-  { name: '普通客户 (NORMAL)', value: 120 },
-  { name: '高风险客户 (RISK)', value: 15 },
-  { name: '新注册 (NEW)', value: 32 }
+  { name: 'High Value (VIP)', value: 45 },
+  { name: 'Standard (NORMAL)', value: 120 },
+  { name: 'High Risk (RISK)', value: 15 },
+  { name: 'New Registration (NEW)', value: 32 }
 ];
 
 const MOCK_TRENDS = [
@@ -68,7 +68,7 @@ export const AdminDashboard: React.FC = () => {
     const fetchData = async () => {
       try {
         const token = await getToken();
-        
+
         // Fetch Customers
         const custRes = await fetch('http://localhost:8000/api/customers', {
           headers: { Authorization: `Bearer ${token}` },
@@ -81,7 +81,7 @@ export const AdminDashboard: React.FC = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         const statsData = await statsRes.json();
-        
+
         // Use backend stats but fallback to richer mock if needed
         setStats(statsData);
 
@@ -98,11 +98,11 @@ export const AdminDashboard: React.FC = () => {
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
-    { title: '姓名', dataIndex: 'name', key: 'name' },
-    { title: '联系邮箱', dataIndex: 'email', key: 'email' },
-    { title: '公司', dataIndex: 'company', key: 'company' },
+    { title: 'Name', dataIndex: 'name', key: 'name' },
+    { title: 'Contact Email', dataIndex: 'email', key: 'email' },
+    { title: 'Company', dataIndex: 'company', key: 'company' },
     {
-      title: '客户标签',
+      title: 'Customer Segment',
       dataIndex: 'category',
       key: 'category',
       render: (category: string) => {
@@ -113,19 +113,19 @@ export const AdminDashboard: React.FC = () => {
         return <Tag color={color}>{label}</Tag>;
       },
     },
-    { 
-      title: '智能评分', 
-      dataIndex: 'priority_score', 
+    {
+      title: 'Smart Score',
+      dataIndex: 'priority_score',
       key: 'priority_score',
-      render: (score: number) => <Text strong style={{ color: score >= 4 ? '#52c41a' : '#bfbfbf'}}>{score || 3}/5</Text>
+      render: (score: number) => <Text strong style={{ color: score >= 4 ? '#52c41a' : '#bfbfbf' }}>{score || 3}/5</Text>
     },
     {
-      title: '快捷操作',
+      title: 'Actions',
       key: 'action',
       render: () => (
         <Space size="middle">
-          <a style={{ color: '#1890ff' }}>分析</a>
-          <a style={{ color: '#fa8c16' }}>调级</a>
+          <a style={{ color: '#1890ff' }}>Analyze</a>
+          <a style={{ color: '#fa8c16' }}>Adjust</a>
         </Space>
       ),
     },
@@ -134,7 +134,7 @@ export const AdminDashboard: React.FC = () => {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
-        <Spin size="large" tip="全面加载多维看板中..." />
+        <Spin size="large" tip="Loading multi-dimensional dashboard..." />
       </div>
     );
   }
@@ -149,45 +149,45 @@ export const AdminDashboard: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
         <div>
           <Title level={2} style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Globot 智能看板 
-            <AntTooltip title="看板显示实时业务指标与 AI 决策性能数据">
+            Globot Insight Dashboard
+            <AntTooltip title="Dashboard displaying real-time business metrics and AI decision performance">
               <InfoCircleOutlined style={{ fontSize: '16px', color: '#8c8c8c', cursor: 'pointer' }} />
             </AntTooltip>
           </Title>
-          <Text type="secondary">全局业务概览与代理人协作动态可视化</Text>
+          <Text type="secondary">Global business overview and agent collaboration visualization</Text>
         </div>
         <div style={{ textAlign: 'right', background: 'white', padding: '8px 16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <Text type="secondary" style={{ fontSize: '12px' }}>当前系统操作人</Text>
+          <Text type="secondary" style={{ fontSize: '12px' }}>Current System Operator</Text>
           <div style={{ fontWeight: 'bold', color: '#1890ff' }}>{user?.fullName || user?.username} (Admin)</div>
         </div>
       </div>
 
       <Row gutter={[24, 24]}>
-        {/* 指标卡片 */}
+        {/* Metric Cards */}
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} hoverable>
-            <Statistic title="累计入库客户" value={stats?.overall.total_customers || 184} prefix={<Tag color="blue">Total</Tag>} />
+            <Statistic title="Total Customers" value={stats?.overall.total_customers || 184} prefix={<Tag color="blue">Total</Tag>} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} hoverable>
-            <Statistic title="AI 决策置信度" value={stats?.overall.avg_confidence ? stats.overall.avg_confidence * 100 : 92.4} precision={1} suffix="%" />
+            <Statistic title="AI Confidence Level" value={stats?.overall.avg_confidence ? stats.overall.avg_confidence * 100 : 92.4} precision={1} suffix="%" />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} hoverable>
-            <Statistic title="实时处理会话" value={stats?.overall.total_conversations || 1256} />
+            <Statistic title="Real-time Sessions" value={stats?.overall.total_conversations || 1256} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} hoverable>
-            <Statistic title="系统实时预警" value={3} valueStyle={{ color: '#cf1322' }} />
+            <Statistic title="Live Alerts" value={3} valueStyle={{ color: '#cf1322' }} />
           </Card>
         </Col>
 
-        {/* 柱状图：会话趋势 */}
+        {/* Bar Chart: Session Trends */}
         <Col xs={24} lg={16}>
-          <Card title="近 7 日会话交互与活跃度趋势 (Bar)" bordered={false} bodyStyle={{ height: '350px' }}>
+          <Card title="Last 7 Days: Session Interaction & Activity (Bar)" bordered={false} bodyStyle={{ height: '350px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -195,16 +195,16 @@ export const AdminDashboard: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" name="新发起会话" fill="#1890ff" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="active" name="持续活跃中" fill="#faad14" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" name="New Sessions" fill="#1890ff" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="active" name="Active Sessions" fill="#faad14" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
         </Col>
-        
-        {/* 饼图：价值分布 */}
+
+        {/* Pie Chart: Value Distribution */}
         <Col xs={24} lg={8}>
-          <Card title="客户资产价值分布 (Pie)" bordered={false} bodyStyle={{ height: '350px' }}>
+          <Card title="Customer Asset Value Distribution (Pie)" bordered={false} bodyStyle={{ height: '350px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -228,42 +228,42 @@ export const AdminDashboard: React.FC = () => {
           </Card>
         </Col>
 
-        {/* 折线图与面积图：系统性能 */}
+        {/* Performance Chart */}
         <Col span={24}>
-          <Card title="AI 代理响应时间与置信度波形 (Line & Area)" bordered={false} bodyStyle={{ height: '300px' }}>
+          <Card title="AI Agent Response Time & Confidence Waveform (Line & Area)" bordered={false} bodyStyle={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={performanceData}>
                 <defs>
                   <linearGradient id="colorLatency" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey="time" />
-                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: '响应时间 (ms)', angle: -90, position: 'insideLeft' }} />
-                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" domain={[0, 1]} label={{ value: '置信度', angle: 90, position: 'insideRight' }} />
+                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: 'Latency (ms)', angle: -90, position: 'insideLeft' }} />
+                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" domain={[0, 1]} label={{ value: 'Confidence', angle: 90, position: 'insideRight' }} />
                 <Tooltip />
                 <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="latency" name="AI 响应延迟" stroke="#8884d8" fillOpacity={1} fill="url(#colorLatency)" />
-                <Line yAxisId="right" type="monotone" dataKey="confidence" name="平均置信度" stroke="#82ca9d" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Area yAxisId="left" type="monotone" dataKey="latency" name="AI Latency" stroke="#8884d8" fillOpacity={1} fill="url(#colorLatency)" />
+                <Line yAxisId="right" type="monotone" dataKey="confidence" name="Avg Confidence" stroke="#82ca9d" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </AreaChart>
             </ResponsiveContainer>
           </Card>
         </Col>
 
-        {/* 详细列表 */}
+        {/* Detailed List */}
         <Col span={24}>
-          <Card title="实时客户画像与风险明细" bordered={false}>
-            <Table 
-              columns={columns} 
+          <Card title="Real-time Customer Profiles & Risk Details" bordered={false}>
+            <Table
+              columns={columns}
               dataSource={customers.length > 0 ? customers : [
-                { id: 101, name: '陈先生', email: 'chen@mock.com', company: '跨越物流', category: 'high_value', priority_score: 5 },
+                { id: 101, name: 'Mr. Chen', email: 'chen@mock.com', company: 'Kuayue Logistics', category: 'high_value', priority_score: 5 },
                 { id: 102, name: 'Linda Wang', email: 'linda@example.com', company: 'Global Trade Co.', category: 'normal', priority_score: 3 },
-                { id: 103, name: '张经理', email: 'zhang@corp.cn', company: '海运通', category: 'low_value', priority_score: 2 }
-              ]} 
-              rowKey="id" 
-              pagination={{ pageSize: 5 }} 
+                { id: 103, name: 'Manager Zhang', email: 'zhang@corp.cn', company: 'Haiyuntong', category: 'low_value', priority_score: 2 }
+              ]}
+              rowKey="id"
+              pagination={{ pageSize: 5 }}
               size="middle"
             />
           </Card>

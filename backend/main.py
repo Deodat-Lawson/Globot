@@ -1,5 +1,5 @@
 """
-FastAPI主应用
+FastAPI Main Application
 """
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +12,7 @@ import logging
 import hashlib
 from dotenv import load_dotenv
 
-# 加载环境变量
+# Load environment variables
 load_dotenv()
 
 # Import modules
@@ -34,20 +34,20 @@ from api.v2.hedge_routes import router as hedge_router
 from api.v2.visual_risk_routes import router as visual_risk_router
 
 
-# 配置日志
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 创建数据库表
+# Create database tables
 Base.metadata.create_all(bind=engine)
 
-# 创建FastAPI应用
+# Create FastAPI app
 app = FastAPI(
     title="DJI Sales AI Assistant API",
-    description="大疆无人机智能销售助理系统", version="0.1.0"
+    description="DJI Drone Intelligent Sales Assistant System", version="0.1.0"
 )
 
-# 注册路由
+# Register routes
 app.include_router(demo_router)
 app.include_router(market_sentinel_router)
 app.include_router(maritime_router)
@@ -59,12 +59,12 @@ app.include_router(analytics_router)
 from api.deps import get_current_user
 
 @app.get("/api/protected")
-def read_protected(request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def read_protected(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Test protected route with Admin Whitelist Check and Stats
     """
-    # Clerk JWT claims often store email in 'email' or custom claims.
-    # Standard Clerk session token might not have email directly in root.
+    # 1. Get email from mock User object
+    user_email = user.email
     
     # Check whitelist
     import os
@@ -72,15 +72,12 @@ def read_protected(request: Request, user: dict = Depends(get_current_user), db:
     # Clean whitespace
     whitelist = [e.strip() for e in whitelist]
     
-    # 1. Try to get email from JWT claims (preferred if configured)
-    user_email = user.get("email", "")
-    
-    # 2. If not in JWT, check the Mock Header (Hackathon workaround)
-    if not user_email:
-        user_email = request.headers.get("X-User-Email", "")
-    
     is_admin = False
-    if user_email and user_email in whitelist:
+    if user_email and user_email.lower() in [w.lower() for w in whitelist]:
+        is_admin = True
+    
+    # Force admin for hackathon if needed, but here we use the role from user
+    if user.role == "admin":
         is_admin = True
     
     # Collect Stats if Admin
@@ -99,10 +96,10 @@ def read_protected(request: Request, user: dict = Depends(get_current_user), db:
         
     return {
         "message": "You are authenticated",
-        "user_id": user.get("sub"),
+        "user_id": user.id,
         "email": user_email,
         "is_admin": is_admin,
-        "claims": user,
+        "claims": user.dict(),
         "stats": stats
     }
 
@@ -110,29 +107,29 @@ def read_protected(request: Request, user: dict = Depends(get_current_user), db:
 # 配置CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应限制来源
+    allow_origins=["*"],  # Restrict origins in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 初始化核心模块
+# Initialize core modules
 try:
     # chatbot = get_chatbot()
     # classifier = get_classifier()
     # handoff_manager = get_handoff_manager()
     crew_orchestrator = get_crew_orchestrator()
-    logger.info("核心模块初始化成功")
+    logger.info("Core modules initialized successfully")
 except Exception as e:
-    logger.error(f"核心模块初始化失败: {e}")
-    # MVP阶段允许部分功能不可用
+    logger.error(f"Core module initialization failed: {e}")
+    # Allow partial functionality in MVP stage
     # chatbot = None
     # classifier = None
     # handoff_manager = None
     crew_orchestrator = None
 
 
-# ========== 数据模型 ==========
+# ========== Data Models ==========
 
 class ChatRequest(BaseModel):
     customer_id: int
@@ -158,18 +155,18 @@ class HandoffRequest(BaseModel):
     reason: str = 'manual_request'
 
 class HumanMessageRequest(BaseModel):
-    """人工发送消息请求"""
+    """Request for manual message sending"""
     conversation_id: int
     content: str
-    agent_name: str = "人工客服"
+    agent_name: str = "Human Agent"
 
 class UpdateHandoffStatusRequest(BaseModel):
-    """更新转人工状态"""
+    """Update handoff status"""
     status: str  # pending/processing/completed
     agent_name: Optional[str] = None
 
 class CompanyResearchRequest(BaseModel):
-    """公司研究请求"""
+    """Company research request"""
     company: str
     question: str
     ticker: Optional[str] = None
@@ -188,11 +185,11 @@ class CrisisActivationRequest(BaseModel):
     operation_params: HedgeOperationParams
 
 
-# ========== API路由 ==========
+# ========== API Routes ==========
 
 @app.get("/")
 def read_root():
-    """根路径"""
+    """Root path"""
     return {
         "message": "DJI Sales AI Assistant API",
         "version": "0.1.0",
@@ -206,14 +203,14 @@ async def chat(
     db: Session = Depends(get_db)
 ):
     """
-    对话接口
+    Dialogue Interface
     """
-    # 1. 验证客户存在
+    # 1. Verify customer exists
     customer = db.query(Customer).filter(Customer.id == request.customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     
-    # 2. 获取或创建活跃会话
+    # 2. Get or create active session
     active_conv = db.query(Conversation).filter(
         Conversation.customer_id == request.customer_id,
         Conversation.status == "active"
@@ -229,7 +226,7 @@ async def chat(
         db.commit()
         db.refresh(active_conv)
     
-    # 3. 保存客户消息
+    # 3. Save customer message
     customer_msg = Message(
         conversation_id=active_conv.id,
         content=request.message,
@@ -239,7 +236,7 @@ async def chat(
     )
     db.add(customer_msg)
     
-    # 4. 调用聊天机器人（CrewAI特性可选）
+    # 4. Call chatbot (CrewAI feature optional)
     response = None
     if request.use_crewai and crew_orchestrator:
         try:
@@ -249,7 +246,7 @@ async def chat(
                 language=request.language
             )
         except Exception as e:
-            logger.warning(f"CrewAI模式失败，回退默认机器人: {e}")
+            logger.warning(f"CrewAI mode failed, falling back to default bot: {e}")
             response = None
 
     if response is None:
@@ -259,7 +256,7 @@ async def chat(
             language=request.language
         )
     
-    # 5. 保存AI消息
+    # 5. Save AI message
     ai_msg = Message(
         conversation_id=active_conv.id,
         content=response['answer'],
@@ -270,15 +267,15 @@ async def chat(
     )
     db.add(ai_msg)
     
-    # 6. 更新会话统计
+    # 6. Update session statistics
     active_conv.message_count += 2
     active_conv.avg_confidence = response['confidence']
     
-    # 7. 异步触发客户分类（不阻塞主流程）
-    if active_conv.message_count >= 4:  # 至少2轮对话后才分类
+    # 7. Asynchronously trigger customer classification (non-blocking)
+    if active_conv.message_count >= 4:  # Classify after at least 2 rounds of dialogue
         bg_tasks.add_task(classify_customer_bg, request.customer_id, db)
     
-    # 8. 如果需要转人工，创建转接记录
+    # 8. Create handoff record if manual handover is required
     if response['should_handoff']:
         handoff_manager.create_handoff(
             db,
@@ -302,8 +299,8 @@ def create_customer(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """创建客户"""
-    # 检查邮箱是否已存在
+    """Create customer"""
+    # Check if email already exists
     existing = db.query(Customer).filter(Customer.email == customer.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
@@ -336,7 +333,8 @@ def list_customers(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """获取客户列表"""
+    """Get customer list"""
+    # Get customer list
     customers = db.query(Customer).order_by(Customer.priority_score.desc()).all()
     return {
         "total": len(customers),
@@ -355,12 +353,12 @@ def list_customers(
 
 @app.post("/api/classify/{customer_id}")
 async def classify_customer(customer_id: int, db: Session = Depends(get_db)):
-    """手动触发客户分类"""
+    """Manually trigger customer classification"""
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     
-    # 获取对话历史
+    # Get conversation history
     messages = db.query(Message).join(Conversation).filter(
         Conversation.customer_id == customer_id
     ).order_by(Message.created_at.desc()).limit(20).all()
@@ -368,16 +366,16 @@ async def classify_customer(customer_id: int, db: Session = Depends(get_db)):
     if not messages:
         raise HTTPException(status_code=400, detail="No conversation history")
     
-    # 格式化消息
+    # Format messages
     conversation_history = [
         {"sender": msg.sender.value, "content": msg.content}
         for msg in reversed(messages)
     ]
     
-    # 分类
+    # Classification
     result = classifier.classify(conversation_history)
     
-    # 更新数据库
+    # Update database
     customer.category = result['category']
     customer.priority_score = result['priority_score']
     customer.classification_reason = result['reason']
@@ -388,15 +386,15 @@ async def classify_customer(customer_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/handoff")
 def create_handoff(request: HandoffRequest, db: Session = Depends(get_db)):
-    """手动转人工"""
+    """Manual handoff"""
     conversation = db.query(Conversation).filter(Conversation.id == request.conversation_id).first()
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
-    # 创建转接
+    # Create handoff
     handoff_id = handoff_manager.create_handoff(db, request.conversation_id, request.reason)
     
-    # 生成摘要
+    # Generate summary
     summary = handoff_manager.generate_summary(db, request.conversation_id)
     
     return {
@@ -406,8 +404,8 @@ def create_handoff(request: HandoffRequest, db: Session = Depends(get_db)):
 
 @app.get("/api/conversations/{customer_id}")
 def get_conversations(customer_id: int, db: Session = Depends(get_db)):
-    """获取客户的所有对话"""
-    # 获取客户的所有对话
+    """Get all conversations for a customer"""
+    # Get all conversations for a customer
     conversations = db.query(Conversation).filter(
         Conversation.customer_id == customer_id
     ).order_by(Conversation.started_at.desc()).all()
@@ -440,7 +438,7 @@ def get_conversations(customer_id: int, db: Session = Depends(get_db)):
 
 @app.get("/api/conversation/{conversation_id}")
 def get_conversation(conversation_id: int, db: Session = Depends(get_db)):
-    """获取单个对话详情（通过conversation_id）"""
+    """Get single conversation details (via conversation_id)"""
     conversation = db.query(Conversation).filter(
         Conversation.id == conversation_id
     ).first()
@@ -470,16 +468,16 @@ def get_conversation(conversation_id: int, db: Session = Depends(get_db)):
         ]
     }
 
-# ========== 人工接手相关API ==========
+# ========== Manual Handoff Related APIs ==========
 
 @app.get("/api/handoffs")
 def get_handoffs(status: Optional[str] = None, db: Session = Depends(get_db)):
-    """获取转人工列表"""
+    """Get handoff list"""
     from models import Handoff, HandoffStatus
     
     query = db.query(Handoff)
     
-    # 状态筛选
+    # Status filter
     if status:
         try:
             status_enum = HandoffStatus(status)
@@ -520,7 +518,7 @@ def get_handoffs(status: Optional[str] = None, db: Session = Depends(get_db)):
 
 @app.post("/api/messages/human")
 def send_human_message(request: HumanMessageRequest, db: Session = Depends(get_db)):
-    """人工发送消息"""
+    """Manually send message"""
     conversation = db.query(Conversation).filter(Conversation.id == request.conversation_id).first()
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -541,7 +539,7 @@ def send_human_message(request: HumanMessageRequest, db: Session = Depends(get_d
 
 @app.put("/api/handoffs/{handoff_id}/status")
 def update_handoff_status(handoff_id: int, request: UpdateHandoffStatusRequest, db: Session = Depends(get_db)):
-    """更新转人工状态"""
+    """Update handoff status"""
     from models import Handoff, HandoffStatus
     
     handoff = db.query(Handoff).filter(Handoff.id == handoff_id).first()
@@ -570,7 +568,7 @@ def update_handoff_status(handoff_id: int, request: UpdateHandoffStatusRequest, 
 
 @app.post("/api/company-research")
 def run_company_research(request: CompanyResearchRequest):
-    """运行公司研究CrewAI流水线"""
+    """Run Company Research CrewAI pipeline"""
     try:
         crew, tasks = build_company_research_crew(
             company=request.company,
@@ -596,7 +594,7 @@ def get_admin_stats(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """获取管理后台统计数据"""
+    """Get admin dashboard statistics"""
     if user.role != "admin":
          # In MVP, we might allow all logged in users for now, or check role
          pass 
@@ -604,19 +602,19 @@ def get_admin_stats(
     from sqlalchemy import func
     from datetime import timedelta
     
-    # 1. 客户分类统计
+    # 1. Customer category statistics
     category_stats = db.query(
         Customer.category, func.count(Customer.id)
     ).group_by(Customer.category).all()
     
-    # 2. 过去7天对话量趋势
+    # 2. Last 7 days conversation trend
     seven_days_ago = datetime.now() - timedelta(days=7)
     trend_stats = db.query(
         func.date(Conversation.started_at), func.count(Conversation.id)
     ).filter(Conversation.started_at >= seven_days_ago) \
      .group_by(func.date(Conversation.started_at)).all()
     
-    # 3. 平均置信度
+    # 3. Average confidence score
     avg_conf = db.query(func.avg(Conversation.avg_confidence)).scalar() or 0.85
 
     return {
@@ -629,12 +627,12 @@ def get_admin_stats(
         }
     }
 
-# ========== 后台任务 ==========
+# ========== Background Tasks ==========
 
 def classify_customer_bg(customer_id: int, db: Session):
-    """后台任务：分类客户"""
+    """Background task: Classify customer"""
     try:
-        # 获取对话历史
+        # Get conversation history
         messages = db.query(Message).join(Conversation).filter(
             Conversation.customer_id == customer_id
         ).order_by(Message.created_at.desc()).limit(20).all()
@@ -655,7 +653,7 @@ def classify_customer_bg(customer_id: int, db: Session):
                 customer.updated_at = datetime.now()
                 db.commit()
     except Exception as e:
-        print(f"后台分类失败: {e}")
+        print(f"Background classification failed: {e}")
 
 if __name__ == "__main__":
     import uvicorn

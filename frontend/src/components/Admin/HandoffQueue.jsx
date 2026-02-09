@@ -23,8 +23,8 @@ const HandoffQueue = () => {
       const response = await chatAPI.getHandoffs(params);
       setHandoffs(response.data.handoffs || []);
     } catch (error) {
-      console.error('获取转人工列表失败:', error);
-      antMessage.error('获取转人工列表失败');
+      console.error('Failed to fetch handoff list:', error);
+      antMessage.error('Failed to fetch handoff list');
     } finally {
       setLoading(false);
     }
@@ -32,20 +32,20 @@ const HandoffQueue = () => {
 
   useEffect(() => {
     fetchHandoffs();
-    // 自动刷新（每30秒）
+    // Auto-refresh (every 30 seconds)
     const interval = setInterval(fetchHandoffs, 30000);
     return () => clearInterval(interval);
   }, [filter]);
 
   const showTakeoverModal = (handoffId) => {
     setSelectedHandoffId(handoffId);
-    setAgentName('销售-李四');
+    setAgentName('Agent-Lisi');
     setTakeoverModalVisible(true);
   };
 
   const handleTakeOver = async () => {
     if (!agentName.trim()) {
-      antMessage.warning('请输入您的姓名');
+      antMessage.warning('Please enter your name');
       return;
     }
 
@@ -55,22 +55,22 @@ const HandoffQueue = () => {
         status: 'processing',
         agent_name: agentName
       });
-      
-      antMessage.success(`${agentName} 已接手对话`);
+
+      antMessage.success(`${agentName} has taken over the conversation`);
       await fetchHandoffs();
     } catch (error) {
-      console.error('接手失败:', error);
-      antMessage.error('接手失败');
+      console.error('Failed to take over:', error);
+      antMessage.error('Failed to take over');
     }
   };
 
   const getPriorityTag = (priority) => {
     const config = {
-      5: { color: 'red', text: '紧急' },
-      4: { color: 'orange', text: '重要' },
-      3: { color: 'blue', text: '一般' },
-      2: { color: 'default', text: '较低' },
-      1: { color: 'default', text: '低' }
+      5: { color: 'red', text: 'URGENT' },
+      4: { color: 'orange', text: 'HIGH' },
+      3: { color: 'blue', text: 'NORMAL' },
+      2: { color: 'default', text: 'LOW' },
+      1: { color: 'default', text: 'VERY LOW' }
     };
     const { color, text } = config[priority] || config[3];
     return <Tag color={color}>{text}</Tag>;
@@ -78,9 +78,9 @@ const HandoffQueue = () => {
 
   const getCategoryTag = (category) => {
     const config = {
-      high_value: { color: 'red', text: '高价值' },
-      normal: { color: 'green', text: '普通' },
-      low_value: { color: 'default', text: '低价值' }
+      high_value: { color: 'red', text: 'High Value' },
+      normal: { color: 'green', text: 'Standard' },
+      low_value: { color: 'default', text: 'Low Value' }
     };
     const { color, text } = config[category] || config.normal;
     return <Tag color={color}>{text}</Tag>;
@@ -88,9 +88,9 @@ const HandoffQueue = () => {
 
   const getStatusTag = (status) => {
     const config = {
-      pending: { color: 'orange', text: '待处理', icon: <ClockCircleOutlined /> },
-      processing: { color: 'blue', text: '处理中', icon: <ClockCircleOutlined /> },
-      completed: { color: 'green', text: '已完成', icon: <CheckCircleOutlined /> }
+      pending: { color: 'orange', text: 'Pending', icon: <ClockCircleOutlined /> },
+      processing: { color: 'blue', text: 'Processing', icon: <ClockCircleOutlined /> },
+      completed: { color: 'green', text: 'Completed', icon: <CheckCircleOutlined /> }
     };
     const { color, text, icon } = config[status] || config.pending;
     return <Tag color={color} icon={icon}>{text}</Tag>;
@@ -98,10 +98,10 @@ const HandoffQueue = () => {
 
   const getReasonText = (reason) => {
     const reasons = {
-      customer_request: '客户要求',
-      low_confidence: 'AI置信度低',
-      manual_request: '手动转接',
-      complex_query: '复杂咨询'
+      customer_request: 'Customer Request',
+      low_confidence: 'Low AI Confidence',
+      manual_request: 'Manual Handoff',
+      complex_query: 'Complex Query'
     };
     return reasons[reason] || reason;
   };
@@ -114,7 +114,7 @@ const HandoffQueue = () => {
       width: 60
     },
     {
-      title: '客户信息',
+      title: 'Customer Info',
       key: 'customer',
       render: (_, record) => (
         <div>
@@ -124,7 +124,7 @@ const HandoffQueue = () => {
       )
     },
     {
-      title: '优先级',
+      title: 'Priority',
       key: 'priority',
       width: 80,
       render: (_, record) => getPriorityTag(record.customer.priority_score),
@@ -132,42 +132,42 @@ const HandoffQueue = () => {
       defaultSortOrder: 'ascend'
     },
     {
-      title: '客户分类',
+      title: 'Category',
       key: 'category',
       width: 100,
       render: (_, record) => getCategoryTag(record.customer.category)
     },
     {
-      title: '转接原因',
+      title: 'Reason',
       dataIndex: 'trigger_reason',
       key: 'trigger_reason',
       width: 120,
       render: (reason) => getReasonText(reason)
     },
     {
-      title: '状态',
+      title: 'Status',
       dataIndex: 'status',
       key: 'status',
       width: 100,
       render: (status) => getStatusTag(status)
     },
     {
-      title: '接手人',
+      title: 'Agent',
       dataIndex: 'agent_name',
       key: 'agent_name',
       width: 100,
       render: (name) => name || '-'
     },
     {
-      title: '创建时间 (UTC)',
+      title: 'Created At (UTC)',
       dataIndex: 'created_at',
       key: 'created_at',
       width: 180,
-      render: (text) => formatUTCDateTimeCN(text),
+      render: (text) => text,
       sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at)
     },
     {
-      title: '操作',
+      title: 'Actions',
       key: 'action',
       width: 180,
       render: (_, record) => (
@@ -179,7 +179,7 @@ const HandoffQueue = () => {
               icon={<PlayCircleOutlined />}
               onClick={() => showTakeoverModal(record.id)}
             >
-              接手
+              Take Over
             </Button>
           )}
           <Button
@@ -188,7 +188,7 @@ const HandoffQueue = () => {
             icon={<EyeOutlined />}
             onClick={() => navigate(`/admin/handoff/${record.id}`)}
           >
-            查看
+            View
           </Button>
         </Space>
       )
@@ -200,16 +200,16 @@ const HandoffQueue = () => {
 
   return (
     <div className={styles.handoffQueue} style={{ padding: 24 }}>
-      {/* 统计面板 */}
+      {/* Stats Panel */}
       <HandoffStats />
-      
+
       <Card>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space size="large">
             <div>
-              <strong style={{ fontSize: 18 }}>转人工队列</strong>
+              <strong style={{ fontSize: 18 }}>Handoff Queue</strong>
               <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
-                待处理: {pendingCount} | 处理中: {processingCount}
+                Pending: {pendingCount} | Processing: {processingCount}
               </div>
             </div>
             <Space>
@@ -218,26 +218,26 @@ const HandoffQueue = () => {
                 onClick={() => setFilter('pending')}
               >
                 <Badge count={pendingCount} offset={[10, 0]}>
-                  待处理
+                  Pending
                 </Badge>
               </Button>
               <Button
                 type={filter === 'processing' ? 'primary' : 'default'}
                 onClick={() => setFilter('processing')}
               >
-                处理中
+                Processing
               </Button>
               <Button
                 type={filter === 'all' ? 'primary' : 'default'}
                 onClick={() => setFilter('all')}
               >
-                全部
+                All
               </Button>
             </Space>
           </Space>
 
           <Button icon={<ReloadOutlined />} onClick={fetchHandoffs}>
-            刷新
+            Refresh
           </Button>
         </div>
 
@@ -249,22 +249,22 @@ const HandoffQueue = () => {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条记录`
+            showTotal: (total) => `Total ${total} records`
           }}
         />
       </Card>
 
-      {/* 接手对话弹窗 */}
+      {/* Take Over Modal */}
       <Modal
-        title="接手对话"
+        title="Take Over Conversation"
         open={takeoverModalVisible}
         onOk={handleTakeOver}
         onCancel={() => setTakeoverModalVisible(false)}
-        okText="确认接手"
-        cancelText="取消"
+        okText="Confirm Take Over"
+        cancelText="Cancel"
       >
         <Input
-          placeholder="请输入您的姓名"
+          placeholder="Please enter your name"
           value={agentName}
           onChange={(e) => setAgentName(e.target.value)}
           onPressEnter={handleTakeOver}

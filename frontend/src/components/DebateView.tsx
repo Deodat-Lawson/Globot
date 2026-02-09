@@ -1,15 +1,17 @@
 ﻿/**
- * DebateView - 瀵规姉杈╄鍙鍖栫粍浠? * 
- * 灞曠ずAdversarial Agent涓庡叾浠朅gent涔嬮棿鐨勮京璁鸿繃绋? * 鍖呭惈鎸戞垬銆佸洖搴斻€佽В鍐充笁涓樁娈电殑鍔ㄧ敾
+ * DebateView - Adversarial Debate Visualization Component
+ * 
+ * Displays the debate process between the Adversarial Agent and other agents.
+ * Includes animations for the challenge, response, and resolution stages.
  */
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  GitBranch, 
-  AlertTriangle, 
-  TrendingUp, 
-  Package, 
+import {
+  GitBranch,
+  AlertTriangle,
+  TrendingUp,
+  Package,
   Shield,
   ArrowRight,
   CheckCircle,
@@ -19,7 +21,7 @@ import {
 } from 'lucide-react';
 import { RAGSourceCard } from './RAGSourceCard';
 
-// Agent閰嶇疆
+// Agent Configuration
 const AGENT_CONFIG: Record<string, { icon: LucideIcon; color: string; name: string }> = {
   market_sentinel: { icon: AlertTriangle, color: '#c94444', name: 'Market Sentinel' },
   risk_hedger: { icon: TrendingUp, color: '#c9a227', name: 'Risk Hedger' },
@@ -34,7 +36,7 @@ interface RAGSource {
   section?: string;
   content_snippet?: string;
   relevance_score: number;
-  azure_service: string;
+  google_service: string;
 }
 
 interface DebateExchange {
@@ -55,8 +57,8 @@ interface DebateViewProps {
   phase?: 'challenge' | 'response' | 'resolve' | 'complete';
 }
 
-export function DebateView({ 
-  exchanges, 
+export function DebateView({
+  exchanges,
   activeExchangeIndex = 0,
   phase = 'challenge'
 }: DebateViewProps) {
@@ -65,7 +67,7 @@ export function DebateView({
   const currentExchange = exchanges[activeExchangeIndex];
   const challengerConfig = AGENT_CONFIG[currentExchange?.challenger_agent] || AGENT_CONFIG.adversarial;
   const defenderConfig = AGENT_CONFIG[currentExchange?.defender_agent] || AGENT_CONFIG.logistics;
-  
+
   const ChallengerIcon = challengerConfig.icon;
   const DefenderIcon = defenderConfig.icon;
 
@@ -193,11 +195,10 @@ export function DebateView({
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-white/80">Resolution</span>
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded ${
-                        currentExchange.resolution_accepted
-                          ? 'text-green-400/80 bg-green-500/10'
-                          : 'text-red-400/80 bg-red-500/10'
-                      }`}
+                      className={`text-[10px] px-1.5 py-0.5 rounded ${currentExchange.resolution_accepted
+                        ? 'text-green-400/80 bg-green-500/10'
+                        : 'text-red-400/80 bg-red-500/10'
+                        }`}
                     >
                       {currentExchange.resolution_accepted ? 'ACCEPTED' : 'REJECTED'}
                     </span>
@@ -205,7 +206,7 @@ export function DebateView({
                   <p className="text-xs text-white/60 leading-relaxed">
                     {currentExchange.resolution}
                   </p>
-                  
+
                   {/* Sources for resolution */}
                   {currentExchange.sources && currentExchange.sources.length > 0 && (
                     <RAGSourceCard sources={currentExchange.sources} compact />
@@ -222,13 +223,12 @@ export function DebateView({
             {exchanges.map((_, index) => (
               <div
                 key={index}
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                  index === activeExchangeIndex
-                    ? 'bg-purple-400'
-                    : index < activeExchangeIndex
-                      ? 'bg-purple-400/40'
-                      : 'bg-white/10'
-                }`}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${index === activeExchangeIndex
+                  ? 'bg-purple-400'
+                  : index < activeExchangeIndex
+                    ? 'bg-purple-400/40'
+                    : 'bg-white/10'
+                  }`}
               />
             ))}
           </div>

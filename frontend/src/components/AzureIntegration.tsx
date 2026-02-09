@@ -19,14 +19,14 @@ export function AzureIntegration() {
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-[#0078d4]/20 border border-[#0078d4]/30 rounded-sm">
-            <Shield className="w-4 h-4 text-[#0078d4]" strokeWidth={1.5} />
+          <div className="p-1.5 bg-[#4285F4]/20 border border-[#4285F4]/30 rounded-sm">
+            <Shield className="w-4 h-4 text-[#4285F4]" strokeWidth={1.5} />
           </div>
           <span className="text-sm font-medium text-white/80 tracking-wide">
-            Powered by Microsoft Azure
+            Powered by Google Cloud
           </span>
         </div>
-        
+
         {isExpanded ? (
           <ChevronUp className="w-4 h-4 text-white/40" strokeWidth={1.5} />
         ) : (
@@ -37,11 +37,11 @@ export function AzureIntegration() {
       {/* Status indicators - Always visible */}
       <div className="px-4 pb-3 space-y-2">
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-3.5 h-3.5 text-[#5a9a7a]" strokeWidth={2} />
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#34A853]" strokeWidth={2} />
           <span className="text-xs text-white/60">All systems secure</span>
         </div>
         <div className="flex items-center gap-2">
-          <Lock className="w-3.5 h-3.5 text-[#5a9a7a]" strokeWidth={2} />
+          <Lock className="w-3.5 h-3.5 text-[#34A853]" strokeWidth={2} />
           <span className="text-xs text-white/60">Compliance validated</span>
         </div>
       </div>
@@ -64,13 +64,13 @@ export function AzureIntegration() {
             </div>
             <div className="space-y-1.5">
               {[
-                'Azure OpenAI Service',
-                'Azure Cognitive Search',
-                'Azure Monitor',
-                'Azure Key Vault',
+                'Vertex AI Search',
+                'Google Gemini AI',
+                'Google Cloud Observability',
+                'Cloud Secret Manager',
               ].map((service, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-[#0078d4]" />
+                  <div className="w-1 h-1 rounded-full bg-[#4285F4]" />
                   <span className="text-xs text-white/50">{service}</span>
                 </div>
               ))}
@@ -86,7 +86,7 @@ export function AzureIntegration() {
               {['SOC 2', 'ISO 27001', 'GDPR', 'HIPAA'].map((cert, i) => (
                 <span
                   key={i}
-                  className="text-[10px] px-2 py-0.5 bg-[#5a9a7a]/10 text-[#5a9a7a] border border-[#5a9a7a]/30 rounded-sm font-mono"
+                  className="text-[10px] px-2 py-0.5 bg-[#34A853]/10 text-[#34A853] border border-[#34A853]/30 rounded-sm font-mono"
                 >
                   {cert}
                 </span>

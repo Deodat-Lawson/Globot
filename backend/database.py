@@ -5,21 +5,21 @@ from config import get_settings
 
 settings = get_settings()
 
-# 创建数据库引擎
+# Create database engine
 engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,
     echo=settings.debug
 )
 
-# 创建会话工厂
+# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 创建Base类
+# Create Base class
 Base = declarative_base()
 
 def get_db():
-    """依赖注入：获取数据库会话"""
+    """Dependency Injection: Get database session Patterns"""
     db = SessionLocal()
     try:
         yield db

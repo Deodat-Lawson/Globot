@@ -19,7 +19,7 @@ const ChatWidget = () => {
   const messagesEndRef = useRef(null);
   const subscriptionRef = useRef(null);
 
-  // 滚动到最新消息
+  // Scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -28,7 +28,7 @@ const ChatWidget = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 订阅消息更新
+  // Subscribe to message updates
   useEffect(() => {
     if (customerId && isOpen) {
       subscriptionRef.current = messageService.subscribe(customerId, (conversations) => {
@@ -48,10 +48,10 @@ const ChatWidget = () => {
     }
   }, [customerId, isOpen]);
 
-  // 创建客户
+  // Create customer
   const handleStartChat = async () => {
     if (!customerName.trim()) {
-      antMessage.warning('请输入您的姓名');
+      antMessage.warning('Please enter your name');
       return;
     }
 
@@ -59,20 +59,20 @@ const ChatWidget = () => {
       setLoading(true);
       const response = await chatAPI.createCustomer({
         name: customerName,
-        email: `${customerName.toLowerCase()}@temp.com` // 临时邮箱
+        email: `${customerName.toLowerCase()}@temp.com` // Temporary email
       });
       setCustomerId(response.data.id);
       setShowNameInput(false);
-      antMessage.success('欢迎！开始咨询吧');
+      antMessage.success('Welcome! Start consulting now');
     } catch (error) {
-      console.error('创建客户失败:', error);
-      antMessage.error('连接失败，请重试');
+      console.error('Failed to create customer:', error);
+      antMessage.error('Connection failed, please try again');
     } finally {
       setLoading(false);
     }
   };
 
-  // 发送消息
+  // Send message
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
@@ -83,7 +83,7 @@ const ChatWidget = () => {
       created_at: new Date().toISOString()
     };
 
-    // 立即显示用户消息
+    // Immediately display user message
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setLoading(true);
@@ -92,10 +92,10 @@ const ChatWidget = () => {
       const response = await chatAPI.sendMessage({
         customer_id: customerId,
         message: inputValue,
-        language: 'zh-cn'
+        language: 'en-us'
       });
 
-      // 添加AI回复
+      // Add AI reply
       const aiMessage = {
         id: Date.now() + 1,
         sender: 'AI',
@@ -106,19 +106,19 @@ const ChatWidget = () => {
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // 如果需要转人工
+      // If manual handoff needed
       if (response.data.should_handoff) {
-        antMessage.info('您的问题已转接人工客服，请稍候');
+        antMessage.info('Your inquiry has been transferred to a human agent, please wait');
       }
     } catch (error) {
-      console.error('发送消息失败:', error);
-      antMessage.error('发送失败，请重试');
+      console.error('Failed to send message:', error);
+      antMessage.error('Send failed, please try again');
     } finally {
       setLoading(false);
     }
   };
 
-  // 按Enter发送
+  // Send on Enter
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -128,7 +128,7 @@ const ChatWidget = () => {
 
   return (
     <div className={styles.chatWidget}>
-      {/* 浮动按钮 */}
+      {/* Floating button */}
       {!isOpen && (
         <Badge count={messages.length} offset={[-10, 10]}>
           <Button
@@ -142,7 +142,7 @@ const ChatWidget = () => {
         </Badge>
       )}
 
-      {/* 聊天窗口 */}
+      {/* Chat window */}
       {isOpen && (
         <Card
           className={styles.chatWindow}
@@ -150,7 +150,7 @@ const ChatWidget = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <RobotOutlined style={{ marginRight: 8 }} />
-                DJI 销售助手
+                Globot Sales Assistant
               </div>
               <Button
                 type="text"
@@ -160,16 +160,16 @@ const ChatWidget = () => {
             </div>
           }
         >
-          {/* 欢迎界面 */}
+          {/* Welcome screen */}
           {showNameInput ? (
             <div className={styles.welcomeScreen}>
               <Avatar size={64} icon={<RobotOutlined />} style={{ marginBottom: 16 }} />
-              <h3>欢迎咨询 DJI 工业无人机</h3>
+              <h3>Welcome to Globot Industrial Solutions</h3>
               <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
-                请输入您的姓名开始对话
+                Please enter your name to start the conversation
               </p>
               <Input
-                placeholder="您的姓名"
+                placeholder="Your Name"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 onPressEnter={handleStartChat}
@@ -181,21 +181,21 @@ const ChatWidget = () => {
                 onClick={handleStartChat}
                 loading={loading}
               >
-                开始咨询
+                Start Consulting
               </Button>
             </div>
           ) : (
             <>
-              {/* 消息列表 */}
+              {/* Message list */}
               <div className={styles.messagesContainer}>
                 {messages.length === 0 && (
                   <div style={{ textAlign: 'center', color: '#8c8c8c', padding: 32 }}>
                     <RobotOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-                    <p>您好！我是DJI销售助手</p>
-                    <p>有什么可以帮您？</p>
+                    <p>Hello! I am your Globot Sales Assistant</p>
+                    <p>How can I help you today?</p>
                   </div>
                 )}
-                
+
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
@@ -216,32 +216,32 @@ const ChatWidget = () => {
                       )}
                       {msg.ai_confidence !== undefined && (
                         <div className={styles.confidenceBadge}>
-                          置信度: {(msg.ai_confidence * 100).toFixed(0)}%
+                          Confidence: {(msg.ai_confidence * 100).toFixed(0)}%
                         </div>
                       )}
                     </div>
                   </div>
                 ))}
-                
+
                 {loading && (
                   <div className={`${styles.message} ${styles.aiMessage}`}>
                     <Avatar size="small" icon={<RobotOutlined />} style={{ backgroundColor: '#52c41a' }} />
                     <div className={styles.messageContent}>
-                      <Spin size="small" /> AI正在思考...
+                      <Spin size="small" /> AI is thinking...
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* 输入框 */}
+              {/* Input box */}
               <div className={styles.inputContainer}>
                 <TextArea
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="输入消息... (Enter发送，Shift+Enter换行)"
+                  placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
                   autoSize={{ minRows: 1, maxRows: 4 }}
                   disabled={loading}
                 />
@@ -252,7 +252,7 @@ const ChatWidget = () => {
                   loading={loading}
                   disabled={!inputValue.trim()}
                 >
-                  发送
+                  Send
                 </Button>
               </div>
             </>

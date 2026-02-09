@@ -5,22 +5,22 @@ from datetime import datetime
 import enum
 
 class CustomerCategory(str, enum.Enum):
-    """客户类别枚举"""
-    HIGH_VALUE = "high_value"  # 优质客户
-    NORMAL = "normal"          # 普通客户
-    LOW_VALUE = "low_value"    # 低价值客户
+    """Customer category enumeration"""
+    HIGH_VALUE = "high_value"  # High-value customer
+    NORMAL = "normal"          # Normal customer
+    LOW_VALUE = "low_value"    # Low-value customer
 
 class ConversationStatus(str, enum.Enum):
-    """会话状态枚举"""
-    ACTIVE = "active"      # 进行中
-    CLOSED = "closed"      # 已关闭
-    HANDOFF = "handoff"    # 已转人工
+    """Conversation status enumeration"""
+    ACTIVE = "active"      # In progress
+    CLOSED = "closed"      # Closed
+    HANDOFF = "handoff"    # Handed off to human
 
 class MessageSender(str, enum.Enum):
-    """消息发送者枚举"""
-    CUSTOMER = "customer"  # 客户
+    """Message sender enumeration"""
+    CUSTOMER = "customer"  # Customer
     AI = "ai"             # AI
-    HUMAN = "human"       # 人工客服
+    HUMAN = "human"       # Human agent
 
 
 # ========== Maritime Compliance Enums ==========
@@ -95,10 +95,10 @@ class PSCRegime(str, enum.Enum):
     AMSA = "amsa"                     # Australian Maritime Safety Authority
 
 
-# ========== 数据模型 ==========
+# ========== Data Models ==========
 
 class Customer(Base):
-    """客户表"""
+    """Customer Table"""
     __tablename__ = "customers"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -107,46 +107,46 @@ class Customer(Base):
     email = Column(String(100), unique=True, index=True)
     company = Column(String(200))
     phone = Column(String(50))
-    language = Column(String(10), default='zh-cn')
+    language = Column(String(10), default='en-us')
     
-    # 分类相关
+    # Classification related
     category = Column(Enum(CustomerCategory), default=CustomerCategory.NORMAL)
-    priority_score = Column(Integer, default=3)  # 1-5分
+    priority_score = Column(Integer, default=3)  # 1-5 points
     classification_reason = Column(Text)
     
-    # 时间戳
+    # Timestamps
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
-    # 关系
+    # Relationships
     conversations = relationship("Conversation", back_populates="customer")
     vessels = relationship("Vessel", back_populates="customer")
     # user_documents now stored in ChromaDB (not PostgreSQL)
 
 
 class Conversation(Base):
-    """会话表"""
+    """Conversation Table"""
     __tablename__ = "conversations"
     
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"))
     status = Column(Enum(ConversationStatus), default=ConversationStatus.ACTIVE)
-    summary = Column(Text)  # 对话摘要
+    summary = Column(Text)  # Conversation summary
     
-    # 统计
+    # Statistics
     message_count = Column(Integer, default=0)
-    avg_confidence = Column(Float)  # 平均置信度
+    avg_confidence = Column(Float)  # Average confidence
     
-    # 时间戳
+    # Timestamps
     started_at = Column(DateTime, default=datetime.now)
     ended_at = Column(DateTime)
     
-    # 关系
+    # Relationships
     customer = relationship("Customer", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation")
 
 class Message(Base):
-    """消息表"""
+    """Message Table"""
     __tablename__ = "messages"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -155,48 +155,48 @@ class Message(Base):
     sender = Column(Enum(MessageSender), nullable=False)
     language = Column(String(10))
     
-    # AI相关
+    # AI related
     ai_confidence = Column(Float)  # 0.00-1.00
-    retrieved_docs = Column(Text)  # RAG检索的文档片段（JSON格式）
+    retrieved_docs = Column(Text)  # Document snippets retrieved from RAG (JSON format)
     
-    # 时间戳
+    # Timestamps
     created_at = Column(DateTime, default=datetime.now)
     
-    # 关系
+    # Relationships
     conversation = relationship("Conversation", back_populates="messages")
 
 class HandoffStatus(str, enum.Enum):
-    """转人工状态枚举"""
-    PENDING = "pending"      # 待处理
-    PROCESSING = "processing"  # 处理中
-    COMPLETED = "completed"    # 已完成
+    """Handoff status enumeration"""
+    PENDING = "pending"      # Pending
+    PROCESSING = "processing"  # Processing
+    COMPLETED = "completed"    # Completed
 
 class Handoff(Base):
-    """人工转接记录表"""
+    """Handoff Record Table"""
     __tablename__ = "handoffs"
     
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"))
     trigger_reason = Column(String(50))  # manual/low_confidence/customer_request
-    agent_name = Column(String(100))  # 接管的销售人员
+    agent_name = Column(String(100))  # Salesperson taking over
     status = Column(Enum(HandoffStatus), default=HandoffStatus.PENDING)
     
-    # 时间戳
+    # Timestamps
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 class KBDocument(Base):
-    """知识库文档元数据表"""
+    """Knowledge Base Document Metadata Table"""
     __tablename__ = "kb_documents"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200))
     content = Column(Text)
     doc_type = Column(String(50))  # manual/faq/product_spec
-    product_tag = Column(String(100))  # M30/M400/Dock3等
+    product_tag = Column(String(100))  # M30/M400/Dock3, etc.
     source_file = Column(String(200))
 
-    # 时间戳
+    # Timestamps
     created_at = Column(DateTime, default=datetime.now)
 
 

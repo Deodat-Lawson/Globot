@@ -31,11 +31,11 @@ class CrisisAutoPlayController:
         self.final_decision = get_final_decision_for_demo()
         self.execution_steps = get_execution_steps_for_demo()
         self.execution_summary = get_execution_summary_for_demo()
-        self.confirmation_event = asyncio.Event()  # 用于等待人工确认
-        self.confirmation_action = None  # 存储用户的确认动作
+        self.confirmation_event = asyncio.Event()  # Used to wait for human confirmation
+        self.confirmation_action = None  # Stores the user's confirmation action
 
     def confirm_decision(self, action: str):
-        """接收用户的确认决策"""
+        """Receives the user's confirmation decision"""
         logger.info(f"User confirmation received: {action}")
         self.confirmation_action = action
         self.confirmation_event.set()
@@ -249,11 +249,11 @@ class CrisisAutoPlayController:
                 "options": self.final_decision.get("approval_options", [])
             })
             
-            # 等待人工确认（必须人为决策才能继续）
+            # Awaiting user confirmation (must be manual decision to proceed)
             logger.info("Waiting for human approval...")
-            await self.confirmation_event.wait()  # 阻塞，直到用户点击确认按钮
+            await self.confirmation_event.wait()  # Block until user clicks confirm
             
-            # 发送确认接收事件
+            # Send confirmation received event
             await websocket.send_json({
                 "type": "CONFIRMATION_RECEIVED",
                 "timestamp": datetime.now().isoformat(),

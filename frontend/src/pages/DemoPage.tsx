@@ -41,7 +41,7 @@ interface RAGSource {
   section?: string;
   content_snippet?: string;
   relevance_score: number;
-  azure_service: string;
+  google_service: string;
 }
 
 interface CoTStep {
@@ -51,7 +51,7 @@ interface CoTStep {
   title: string;
   content: string;
   confidence: number;
-  azure_service: string;
+  google_service: string;
   sources?: RAGSource[];
   duration_ms?: number;
 }
@@ -92,7 +92,7 @@ interface ExecutionStep {
   action: string;
   title: string;
   description: string;
-  azure_service: string;
+  google_service: string;
   duration_ms: number;
   status?: 'pending' | 'executing' | 'complete';
 }
@@ -505,8 +505,8 @@ export const DemoPage: React.FC = () => {
   // Handle user confirmation of decision (NEW)
   const handleConfirmDecision = async (action: string) => {
     console.log('[Decision Confirmation] User clicked:', action);
-    // 通过WebSocket发送确认消息给后端
-    // 后端会等待这个确认才继续执行
+    // Send confirmation message to backend via WebSocket
+    // The backend will wait for this confirmation before proceeding
     const message = {
       action: "confirm",
       confirmation_type: action
@@ -616,7 +616,7 @@ export const DemoPage: React.FC = () => {
           <div className="flex items-center gap-1 bg-[#1a2332] border border-[#2d3a4f] rounded-sm p-1">
             <button
               onClick={() => setIs3D(false)}
-              style={{ background: !is3D ? '#0078d4' : 'transparent', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
+              style={{ background: !is3D ? '#4285F4' : 'transparent', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
               className="px-3 py-1.5 rounded-sm transition-all flex items-center gap-2"
             >
               <Map className="w-4 h-4" strokeWidth={2} style={{ color: '#ffffff' }} />
@@ -624,7 +624,7 @@ export const DemoPage: React.FC = () => {
             </button>
             <button
               onClick={() => setIs3D(true)}
-              style={{ background: is3D ? '#0078d4' : 'transparent', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
+              style={{ background: is3D ? '#4285F4' : 'transparent', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
               className="px-3 py-1.5 rounded-sm transition-all flex items-center gap-2"
             >
               <Globe className="w-4 h-4" strokeWidth={2} style={{ color: '#ffffff' }} />
@@ -817,11 +817,11 @@ export const DemoPage: React.FC = () => {
 
       {/* Keyboard Shortcuts Help Modal */}
       {showKeyboardHelp && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={() => setShowKeyboardHelp(false)}
         >
-          <div 
+          <div
             className="bg-[#0f1621] border border-[#1a2332] rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -840,10 +840,10 @@ export const DemoPage: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             <div className="space-y-3">
               {KEYBOARD_SHORTCUTS.map((shortcut, index) => (
-                <div 
+                <div
                   key={shortcut.key}
                   className="flex items-center justify-between py-2 border-b border-[#1a2332] last:border-0"
                 >
@@ -854,7 +854,7 @@ export const DemoPage: React.FC = () => {
                 </div>
               ))}
             </div>
-            
+
             <p className="mt-4 text-xs text-white/40 text-center">
               Press <kbd className="px-1 py-0.5 bg-[#1a2332] rounded text-[10px] font-mono">?</kbd> anytime to show this help
             </p>

@@ -19,7 +19,7 @@ const HandoffStats = () => {
 
   useEffect(() => {
     fetchStats();
-    // 每30秒刷新一次
+    // Refresh every 30 seconds
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -28,11 +28,11 @@ const HandoffStats = () => {
     try {
       const response = await chatAPI.getHandoffs();
       const handoffs = response.data.handoffs;
-      
+
       const pending = handoffs.filter(h => h.status === 'pending').length;
       const processing = handoffs.filter(h => h.status === 'processing').length;
       const completed = handoffs.filter(h => h.status === 'completed').length;
-      
+
       setStats({
         total: handoffs.length,
         pending,
@@ -41,21 +41,21 @@ const HandoffStats = () => {
         avgResponseTime: calculateAvgResponseTime(handoffs)
       });
     } catch (error) {
-      console.error('获取统计数据失败:', error);
+      console.error('Failed to fetch stats:', error);
     }
   };
 
   const calculateAvgResponseTime = (handoffs) => {
     const completedHandoffs = handoffs.filter(h => h.status === 'completed' && h.updated_at && h.created_at);
     if (completedHandoffs.length === 0) return 0;
-    
+
     const totalTime = completedHandoffs.reduce((sum, h) => {
       const created = new Date(h.created_at);
       const updated = new Date(h.updated_at);
       return sum + (updated - created);
     }, 0);
-    
-    return Math.round(totalTime / completedHandoffs.length / 1000 / 60); // 转换为分钟
+
+    return Math.round(totalTime / completedHandoffs.length / 1000 / 60); // Converted to minutes
   };
 
   const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
@@ -66,7 +66,7 @@ const HandoffStats = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="总转人工数"
+              title="Total Handoffs"
               value={stats.total}
               prefix={<TeamOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -76,7 +76,7 @@ const HandoffStats = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="待处理"
+              title="Pending"
               value={stats.pending}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#faad14' }}
@@ -86,7 +86,7 @@ const HandoffStats = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="处理中"
+              title="Processing"
               value={stats.processing}
               prefix={<RiseOutlined />}
               valueStyle={{ color: '#13c2c2' }}
@@ -96,7 +96,7 @@ const HandoffStats = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="已完成"
+              title="Completed"
               value={stats.completed}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -104,19 +104,19 @@ const HandoffStats = () => {
           </Card>
         </Col>
       </Row>
-      
+
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col span={12}>
-          <Card title="平均响应时间">
+          <Card title="Avg Response Time">
             <Statistic
               value={stats.avgResponseTime}
-              suffix="分钟"
+              suffix="min"
               valueStyle={{ fontSize: 32 }}
             />
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="完成率">
+          <Card title="Completion Rate">
             <Progress
               type="dashboard"
               percent={completionRate}

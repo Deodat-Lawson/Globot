@@ -5,7 +5,7 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    """系统配置"""
+    """System Configuration"""
     
     # Pydantic V2 config
     model_config = SettingsConfigDict(
@@ -15,19 +15,19 @@ class Settings(BaseSettings):
         extra="ignore",  # Ignore extra env vars not defined here
     )
     
-    # 数据库
+    # Database
     database_url: str = "postgresql://user:password@localhost:5432/dji_sales_mvp"
     
-    # LLM选择: ollama 或 openai
+    # LLM Selection: ollama or openai
     llm_provider: str = "ollama"
 
-    # Ollama配置（使用本地LLM）
+    # Ollama Configuration (Local LLM)
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen2.5:latest"  # 或 llama3, mistral等
+    ollama_model: str = "qwen2.5:latest"  # or llama3, mistral, etc.
 
-    # OpenAI配置（使用ChatGPT）
+    # OpenAI Configuration (ChatGPT)
     openai_api_key: Optional[str] = None
-    openai_base_url: Optional[str] = None  # 可自定义代理/自建兼容接口
+    openai_base_url: Optional[str] = None  # Customizable proxy/self-built compatible interface
     openai_model: str = "gpt-4o-mini"
     
     # Google API (for Gemini embeddings)
@@ -36,14 +36,14 @@ class Settings(BaseSettings):
     # Google Maps API (for Static Maps - can be same or different from google_api_key)
     google_maps_api_key: Optional[str] = None
 
-    # 向量数据库
+    # Vector Database
     chroma_persist_dir: str = "./data/vectordb"
     maritime_kb_persist_dir: str = "./data/vectordb/maritime"
     chroma_api_key: Optional[str] = None
     chroma_tenant: Optional[str] = None
     chroma_database: Optional[str] = None
 
-    # 文件上传
+    # File Upload
     upload_dir: str = "./data/uploads"
     documents_upload_dir: str = "./data/uploads/documents"
     max_upload_size_mb: int = 50
@@ -54,16 +54,16 @@ class Settings(BaseSettings):
     # CrewAI Feature Flags
     document_analysis_use_crewai: bool = True
     
-    # Clerk配置
+    # Clerk Configuration
     clerk_issuer_url: Optional[str] = None
     admin_whitelist: str = "thaumatext@gmail.com"
 
-    # 系统配置
+    # System Configuration
     log_level: str = "INFO"
     debug: bool = True
 
 
 @lru_cache()
 def get_settings() -> Settings:
-    """获取配置实例（单例模式）"""
+    """Get configuration instance (singleton pattern)"""
     return Settings()

@@ -15,8 +15,8 @@ active_sessions = {}
 @router.post("/start")
 async def start_demo(scenario: str = "crisis_455pm"):
     """
-    启动Demo
-    返回 demo_id 和 WebSocket URL
+    Start Demo
+    Return demo_id and WebSocket URL
     """
     demo_id = str(uuid.uuid4())
     logger.info(f"Starting demo session: {demo_id} for scenario: {scenario}")
@@ -34,7 +34,7 @@ async def start_demo(scenario: str = "crisis_455pm"):
 @router.websocket("/ws")
 async def websocket_demo(websocket: WebSocket, demo_id: str):
     """
-    WebSocket连接处理
+    WebSocket Connection Handling
     """
     await websocket.accept()
     logger.info(f"WebSocket connected for demo_id: {demo_id}")
@@ -56,11 +56,11 @@ async def websocket_demo(websocket: WebSocket, demo_id: str):
             if data.get("action") == "play":
                 if not controller.is_playing:
                     controller.is_playing = True
-                    # 在后台任务中运行demo序列，这样主循环可以继续接收消息
+                    # Run demo sequence in background task so main loop can continue receiving messages
                     demo_task = asyncio.create_task(controller.run_demo_sequence(websocket))
                     logger.info("Demo sequence started in background")
             elif data.get("action") == "confirm":
-                # 用户确认决策（Approve/Override/Details）
+                # User confirms decision (Approve/Override/Details)
                 confirmation_type = data.get("confirmation_type", "approve")
                 logger.info(f"User confirmed decision: {confirmation_type}")
                 controller.confirm_decision(confirmation_type)
@@ -78,7 +78,7 @@ async def websocket_demo(websocket: WebSocket, demo_id: str):
         except:
             pass
     finally:
-        # 取消后台任务
+        # Cancel background task
         if demo_task and not demo_task.done():
             demo_task.cancel()
         if demo_id in active_sessions:
