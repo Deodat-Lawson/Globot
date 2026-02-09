@@ -29,20 +29,21 @@
 #                 "reason": "Classification reason"
 #             }
 #         """
-#         # 构建提示词
+#         # Build prompt
 #         prompt = self._build_classification_prompt(conversation_history)
         
-#         # 调用LLM
+#         # Call LLM
 #         response = self.llm.generate(prompt, temperature=0.3)
         
-#         # 解析结果
+#         # Parse results
 #         try:
 #             result = self._parse_classification_result(response)
-#             logger.info(f"客户分类完成: {result['category']} (置信度: {result['priority_score']}/5)")
+#             logger.info(f"Customer classification complete: {result['category']} (Confidence: {result['priority_score']}/5)")
 #             return result
 #         except Exception as e:
-#             logger.error(f"分类结果解析失败: {e}, 原始响应: {response}")
-#             # 返回默认分类
+#             logger.error(f"Classification result parsing failed: {e}, Raw response: {response}")
+#             # Return default classification
+#             return {
 #                 "category": CustomerCategory.NORMAL,
 #                 "priority_score": 3,
 #                 "reason": "Classification failed, using default"
@@ -99,7 +100,6 @@
     
 #     def _parse_classification_result(self, response: str) -> dict:
 #         """Parse classification result"""
-#         # 尝试提取JSON
 #         # Attempt to extract JSON
 #         import re
 #         json_match = re.search(r'\{[^{}]*"category"[^{}]*\}', response, re.DOTALL)

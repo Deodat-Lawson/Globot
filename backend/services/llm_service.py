@@ -123,7 +123,7 @@
 #         )
 
 
-# # 全局单例
+# # Global Singleton
 # _llm_service = None
 
 # def get_llm_service() -> OllamaService:

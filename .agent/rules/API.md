@@ -64,7 +64,7 @@ class SecureAPIClient:
                 f"For example: export {env_var}='your-key-here'"
             )
 
-        # 记录密钥哈希（用于日志，不暴露密钥）
+        # Record key hash (for logs, do not expose key)
         key_hash = hashlib.sha256(key.encode()).hexdigest()[:8]
         print(f"[Security Note] Loaded {self.service_name} API key (hash: ...{key_hash})")
         return key

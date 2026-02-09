@@ -104,7 +104,7 @@ def read_protected(request: Request, user: User = Depends(get_current_user), db:
     }
 
 
-# 配置CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Restrict origins in production

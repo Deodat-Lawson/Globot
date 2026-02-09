@@ -24,7 +24,7 @@ export const useWebSocket = () => {
         const data = JSON.parse(event.data);
         console.log("WebSocket event:", data);
         setEvents((prev) => [...prev, data]);
-        // 根据事件类型触发UI更新 logic can be added here or in the component depending on state
+        // Logic to trigger UI update based on event type can be added here or in the component depending on state
       } catch (e) {
         console.error("Error parsing websocket message", e);
       }

@@ -35,7 +35,7 @@
 #         )
 #         db.add(handoff)
         
-#         # 更新会话状态
+#         # Update conversation status
 #         conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
 #         if conversation:
 #             conversation.status = "handoff"
