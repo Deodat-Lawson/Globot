@@ -4,6 +4,11 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@clerk/clerk-react': '/src/mocks/clerkReactMock.tsx',
+    },
+  },
   plugins: [tailwindcss(), react()],
   server: {
     port: 5173,

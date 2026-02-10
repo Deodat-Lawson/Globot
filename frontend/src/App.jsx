@@ -22,13 +22,6 @@ import { SignInPage } from './pages/SignInPage';
 import { AdminPage } from './pages/AdminPage';
 import { UsersHome } from './pages/UsersHome';
 
-// Import publishable key
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Publishable Key")
-}
-
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
